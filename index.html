@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamSlate — Embedded YouTube Desktop Client</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slateDeep: '#0B0F19',
+                        slateCard: '#0F172A',
+                        slateElevated: '#1E293B',
+                        cyberCyan: '#06B6D4',
+                        cyberTeal: '#14B8A6',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Cyber-Slate Scrollbars & Glassmorphism Utilities */
+        body {
+            background-color: #0B0F19;
+            color: #F8FAFC;
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0F19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 9999px;
+            border: 2px solid #0B0F19;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        .glass-header {
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Smooth Aspect Ratio Wrapper for Iframe */
+        .player-aspect {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            background: #050811;
+        }
+        .player-aspect iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+
+    <!-- Toast Notification Container (Replaces alert()) -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+    <!-- Top Sticky Glassmorphic Navigation -->
+    <header class="glass-header sticky top-0 z-40 w-full">
+        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+            
+            <!-- Brand Logo & Status -->
+            <div class="flex items-center gap-3">
+                <button onclick="resetHome()" class="flex items-center gap-2.5 group focus:outline-none text-left">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+                        <svg class="w-5 h-5 text-slate-950 fill-current" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">StreamSlate</span>
+                        <span id="api-badge" class="hidden sm:inline-block ml-2 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Public Relay</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Search Bar & Direct URL Input -->
+            <form id="search-form" class="order-3 md:order-2 w-full md:flex-1 md:max-w-2xl flex items-center">
+                <div class="relative w-full flex items-center">
+                    <div class="absolute left-3.5 text-slate-400 pointer-events-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                        </svg>
+                    </div>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Search YouTube or paste any youtube.com / youtu.be link..." 
+                        autocomplete="off"
+                        class="w-full bg-slate-900/90 text-slate-100 placeholder-slate-400 text-sm rounded-l-xl pl-10 pr-9 py-2.5 border border-slate-700/70 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
+                    >
+                    <button 
+                        type="button" 
+                        id="clear-search-btn" 
+                        onclick="clearSearchInput()"
+                        title="Clear search"
+                        class="hidden absolute right-2 text-slate-400 hover:text-slate-200 p-1 rounded-lg"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M18 6 6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <button 
+                    type="submit" 
+                    class="bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-r-xl transition-all shadow-md shadow-cyan-500/10 flex items-center gap-1.5 shrink-0"
+                >
+                    <span>Search</span>
+                </button>
+            </form>
+
+            <!-- Action Controls: Library/Queue & Settings -->
+            <div class="order-2 md:order-3 flex items-center gap-2">
+                <button 
+                    id="nav-explore-btn"
+                    onclick="switchTab('explore')"
+                    class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+                >
+                    Explore
+                </button>
+                <button 
+                    id="nav-library-btn"
+                    onclick="switchTab('library')"
+                    class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 border border-transparent flex items-center gap-1.5"
+                >
+                    <span>Saved & Queue</span>
+                    <span id="saved-count-badge" class="bg-slate-800 text-cyan-400 font-mono text-xs px-1.5 py-0.2 rounded-md">0</span>
+                </button>
+                <button 
+                    onclick="toggleModal('settings-modal', true)"
+                    title="API & Playback Settings"
+                    class="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 border border-slate-700/70 transition-all"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div id="category-bar" class="max-w-[1600px] mx-auto px-4 sm:px-6 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button data-cat="All" onclick="selectCategory('All')" class="cat-pill active shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-cyan-500 text-slate-950 shadow-sm transition-all">All</button>
+            <button data-cat="Coding & CS" onclick="selectCategory('Coding & CS')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Coding & CS</button>
+            <button data-cat="Tech & Hardware" onclick="selectCategory('Tech & Hardware')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Tech & Hardware</button>
+            <button data-cat="Ambient Focus" onclick="selectCategory('Ambient Focus')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Ambient Focus</button>
+            <button data-cat="Science & Space" onclick="selectCategory('Science & Space')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Science & Space</button>
+            <button data-cat="Design & UI" onclick="selectCategory('Design & UI')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Design & UI</button>
+        </div>
+    </header>
+
+    <!-- Main Content Workspace -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+
+        <!-- In-Page Theater Video Player Section (Hidden until a video is selected) -->
+        <section id="player-section" class="hidden glass-panel rounded-2xl overflow-hidden shadow-2xl shadow-black/60 border border-cyan-500/20 transition-all">
+            <div id="player-layout-grid" class="grid grid-cols-1 lg:grid-cols-12">
+                
+                <!-- Video Stage -->
+                <div id="player-stage-col" class="lg:col-span-8 bg-black flex flex-col">
+                    <div class="player-aspect">
+                        <iframe 
+                            id="yt-iframe"
+                            src=""
+                            title="YouTube Embedded Player"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    
+                    <!-- Player Metadata & Action Toolbar -->
+                    <div class="p-4 sm:p-5 bg-slate-900/95 border-t border-slate-800/80 flex flex-col gap-3">
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div class="space-y-1">
+                                <h1 id="player-title" class="text-base sm:text-lg font-bold text-white leading-snug">Video Title</h1>
+                                <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                                    <span id="player-channel" class="text-cyan-400 font-medium">Channel Name</span>
+                                    <span>•</span>
+                                    <span id="player-meta">Views • Date</span>
+                                    <span>•</span>
+                                    <span id="player-id-tag" class="font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">ID: ---</span>
+                                </div>
+                            </div>
+
+                            <!-- Toolbar Controls -->
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <button onclick="toggleBookmarkCurrent()" id="player-bookmark-btn" class="px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                                    </svg>
+                                    <span id="player-bookmark-label">Save</span>
+                                </button>
+                                
+                                <button onclick="copyShareLink()" class="px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                    </svg>
+                                    <span>Copy Link</span>
+                                </button>
+
+                                <button onclick="toggleTheaterMode()" id="theater-btn" class="hidden lg:flex px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 items-center gap-1.5 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <rect width="18" height="14" x="3" y="5" rx="2"/>
+                                    </svg>
+                                    <span id="theater-label">Wide Mode</span>
+                                </button>
+
+                                <button onclick="closePlayer()" class="px-3 py-2 rounded-xl text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M18 6 6 18M6 6l12 12"/>
+                                    </svg>
+                                    <span>Close</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Up Next / Active Queue Sidebar -->
+                <div id="player-queue-col" class="lg:col-span-4 bg-slate-950/70 border-t lg:border-t-0 lg:border-l border-slate-800/80 flex flex-col max-h-[540px]">
+                    <div class="p-3.5 border-b border-slate-800/80 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-cyan-400">Up Next Queue</span>
+                            <span id="queue-count" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">0</span>
+                        </div>
+                        <button onclick="playNextInQueue()" class="text-xs text-teal-400 hover:text-teal-300 font-medium flex items-center gap-1">
+                            <span>Play Next</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="queue-list-container" class="flex-1 overflow-y-auto p-3 space-y-2.5">
+                        <!-- Queue items rendered dynamically -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Explore View -->
+        <section id="explore-view" class="space-y-4">
+            <!-- Status Banner -->
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                    <h2 id="feed-heading" class="text-lg font-semibold text-white">Featured & Curated Streams</h2>
+                    <span id="source-indicator" class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700/70">Offline Starter Library</span>
+                </div>
+                <div id="loading-spinner" class="hidden flex items-center gap-2 text-xs text-cyan-400 font-medium">
+                    <svg class="animate-spin h-4 w-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="loading-text">Querying public relays...</span>
+                </div>
+            </div>
+
+            <!-- Video Grid -->
+            <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <!-- Video Cards injected here -->
+            </div>
+        </section>
+
+        <!-- Saved Watchlist & History View -->
+        <section id="library-view" class="hidden space-y-6">
+            <div class="glass-panel rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Saved Watchlist & Local Queue</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Stored locally in your browser's storage. Export as JSON to back up or transfer across devices.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="exportLibraryJSON()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-all">
+                        Export JSON
+                    </button>
+                    <label class="px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 cursor-pointer transition-all">
+                        <span>Import JSON</span>
+                        <input type="file" accept=".json" onchange="importLibraryJSON(event)" class="hidden">
+                    </label>
+                    <button onclick="clearSavedLibrary()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-all">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            <div id="saved-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <!-- Saved video cards injected here -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Settings & API Configuration Modal -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full rounded-2xl p-6 shadow-2xl border border-slate-700/80 space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                    <h3 class="text-base font-bold text-white">Search Provider & API Settings</h3>
+                </div>
+                <button onclick="toggleModal('settings-modal', false)" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M18 6 6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-sm">
+                <!-- Mode Selection -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Active Search Engine</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button type="button" id="mode-public-btn" onclick="setSearchMode('public')" class="p-3 rounded-xl border text-left transition-all bg-cyan-500/15 border-cyan-500 text-white">
+                            <div class="font-semibold text-xs text-cyan-300">Public Relay Chain</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">Zero-key Piped & Invidious failover</div>
+                        </button>
+                        <button type="button" id="mode-youtube-btn" onclick="setSearchMode('youtube')" class="p-3 rounded-xl border text-left transition-all bg-slate-900 border-slate-700 text-slate-300">
+                            <div class="font-semibold text-xs text-teal-300">YouTube Data API v3</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">Official Google API (requires key)</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Optional API Key Input -->
+                <div class="space-y-1.5">
+                    <label for="yt-api-key-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        YouTube Data API v3 Key (Optional)
+                    </label>
+                    <input 
+                        type="password" 
+                        id="yt-api-key-input" 
+                        placeholder="AIzaSy..." 
+                        class="w-full bg-slate-950 text-slate-100 text-xs font-mono rounded-xl px-3.5 py-2.5 border border-slate-700 focus:border-cyan-500 focus:outline-none"
+                    >
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        Your key is stored strictly in your browser's <code class="text-cyan-400">localStorage</code> and never sent anywhere except <code class="text-slate-300">googleapis.com</code>.
+                    </p>
+                </div>
+
+                <!-- Direct URL Tip -->
+                <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 space-y-1">
+                    <div class="font-semibold text-cyan-400">Instant Direct Playback Tip</div>
+                    <p class="text-slate-400 text-[11px]">
+                        Even without an API connection, pasting any <code class="text-slate-200">youtube.com/watch?v=...</code>, <code class="text-slate-200">youtu.be/...</code>, <code class="text-slate-200">/shorts/...</code>, or 11-character Video ID into the search bar launches it immediately.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button onclick="toggleModal('settings-modal', false)" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800">Cancel</button>
+                <button onclick="saveSettings()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 shadow-md">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * StreamSlate — Single-File Embedded YouTube Client
+         * Architecture:
+         * 1. Offline Curated Starter Library (ensures immediate content on load)
+         * 2. Multi-endpoint CORS Failover Chain (Piped & Invidious JSON APIs)
+         * 3. Optional YouTube Data API v3 integration via localStorage
+         * 4. Direct YouTube URL / Video ID Parser
+         * 5. Privacy-enhanced youtube-nocookie.com Theater Player + Queue + Saved Watchlist
+         */
+
+        // Curated Starter Library (Reliable, verified educational, tech, and ambient streams)
+        const STARTER_VIDEOS = [
+            {
+                id: 'jfKfPfyJRdk',
+                title: 'lofi hip hop radio 📚 beats to relax/study to',
+                channel: 'Lofi Girl',
+                views: 'LIVE',
+                uploaded: '24/7 Stream',
+                duration: 'LIVE',
+                category: 'Ambient Focus'
+            },
+            {
+                id: '8mAITcNt710',
+                title: 'Harvard CS50 (2023) – Full Computer Science University Course',
+                channel: 'freeCodeCamp.org',
+                views: '4.8M views',
+                uploaded: '1 year ago',
+                duration: '25:13:45',
+                category: 'Coding & CS'
+            },
+            {
+                id: 'PkZNo7MFNFg',
+                title: 'Learn JavaScript - Full Course for Beginners',
+                channel: 'freeCodeCamp.org',
+                views: '18M views',
+                uploaded: '5 years ago',
+                duration: '3:26:42',
+                category: 'Coding & CS'
+            },
+            {
+                id: '5qap5aO4i9A',
+                title: 'synthwave radio 🌌 beats to chill/game to',
+                channel: 'Lofi Girl',
+                views: 'LIVE',
+                uploaded: '24/7 Stream',
+                duration: 'LIVE',
+                category: 'Ambient Focus'
+            },
+            {
+                id: 'aircAruvnKk',
+                title: 'But what is a neural network? | Deep learning chapter 1',
+                channel: '3Blue1Brown',
+                views: '17M views',
+                uploaded: '6 years ago',
+                duration: '19:13',
+                category: 'Science & Space'
+            },
+            {
+                id: 'Tn6-PIqc4UM',
+                title: 'React in 100 Seconds',
+                channel: 'Fireship',
+                views: '1.4M views',
+                uploaded: '3 years ago',
+                duration: '2:18',
+                category: 'Coding & CS'
+            },
+            {
+                id: 'udFxKZRyQtE',
+                title: 'The Largest Black Hole in the Universe - Size Comparison',
+                channel: 'Kurzgesagt – In a Nutshell',
+                views: '26M views',
+                uploaded: '3 years ago',
+                duration: '12:08',
+                category: 'Science & Space'
+            },
+            {
+                id: 'M5QY2_8704o',
+                title: 'Chillstep Music for Programming / Cyber / Coding',
+                channel: 'BLUME',
+                views: '6.2M views',
+                uploaded: '4 years ago',
+                duration: '1:58:14',
+                category: 'Ambient Focus'
+            },
+            {
+                id: 'ysz5S6PUM-U',
+                title: 'How Linux Works Under the Hood',
+                channel: 'Tech Explained',
+                views: '920K views',
+                uploaded: '1 year ago',
+                duration: '18:45',
+                category: 'Tech & Hardware'
+            },
+            {
+                id: '_uQrJ0TkZlc',
+                title: 'Python Full Course for Beginners',
+                channel: 'Programming with Mosh',
+                views: '41M views',
+                uploaded: '5 years ago',
+                duration: '6:14:07',
+                category: 'Coding & CS'
+            },
+            {
+                id: 'c9Wg6Cb_YlU',
+                title: 'UI / UX Design Tutorial – Wireframe, Mockup & Design in Figma',
+                channel: 'freeCodeCamp.org',
+                views: '3.9M views',
+                uploaded: '3 years ago',
+                duration: '1:38:22',
+                category: 'Design & UI'
+            },
+            {
+                id: 'kqtD5dpn9C8',
+                title: 'Python for Beginners - Learn Python in 1 Hour',
+                channel: 'Programming with Mosh',
+                views: '19M views',
+                uploaded: '3 years ago',
+                duration: '1:00:05',
+                category: 'Tech & Hardware'
+            }
+        ];
+
+        // Public CORS-enabled Piped & Invidious API Endpoints for Zero-Setup Live Search
+        const PUBLIC_RELAYS = [
+            { type: 'piped', url: 'https://pipedapi.kavin.rocks' },
+            { type: 'piped', url: 'https://pipedapi.adminforge.de' },
+            { type: 'piped', url: 'https://api.piped.yt' },
+            { type: 'invidious', url: 'https://inv.nadeko.net' },
+            { type: 'invidious', url: 'https://invidious.nerdvpn.de' },
+            { type: 'invidious', url: 'https://yewtu.be' }
+        ];
+
+        // Application State
+        let state = {
+            currentVideos: [...STARTER_VIDEOS],
+            savedVideos: JSON.parse(localStorage.getItem('streamslate_saved') || '[]'),
+            queue: JSON.parse(localStorage.getItem('streamslate_queue') || '[]'),
+            activeVideo: null,
+            activeCategory: 'All',
+            theaterMode: false,
+            searchMode: localStorage.getItem('streamslate_search_mode') || 'public',
+            ytApiKey: localStorage.getItem('streamslate_yt_api_key') || ''
+        };
+
+        // Initialize UI on Load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSavedBadge();
+            updateSettingsUI();
+            renderVideoGrid(state.currentVideos);
+            renderQueue();
+
+            // Search input clear button visibility
+            const searchInput = document.getElementById('search-input');
+            const clearBtn = document.getElementById('clear-search-btn');
+            searchInput.addEventListener('input', () => {
+                clearBtn.classList.toggle('hidden', searchInput.value.trim() === '');
+            });
+
+            // Search form submit
+            document.getElementById('search-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleSearch(searchInput.value.trim());
+            });
+        });
+
+        /**
+         * Extracts an 11-character YouTube Video ID from any URL or direct ID string
+         */
+        function extractYouTubeId(input) {
+            if (!input) return null;
+            const trimmed = input.trim();
+            // Direct 11-char ID check
+            if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+                return trimmed;
+            }
+            // Match standard watch?v=, youtu.be/, /embed/, /shorts/, /live/
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+            const match = trimmed.match(regex);
+            return match ? match[1] : null;
+        }
+
+        /**
+         * Handles Search Form Submission (Direct URL/ID detection OR Live API Search)
+         */
+        async function handleSearch(query) {
+            if (!query) {
+                resetHome();
+                return;
+            }
+
+            switchTab('explore');
+
+            // 1. Check if input is a direct YouTube URL or Video ID
+            const directId = extractYouTubeId(query);
+            if (directId) {
+                const videoObj = {
+                    id: directId,
+                    title: `Direct YouTube Stream (${directId})`,
+                    channel: 'YouTube Embedded Player',
+                    views: 'Direct Link',
+                    uploaded: 'Instant Load',
+                    duration: 'HD',
+                    category: 'Direct'
+                };
+                playVideo(videoObj);
+                showToast(`Loaded Video ID: ${directId}`, 'success');
+                return;
+            }
+
+            // 2. Otherwise perform live search
+            setLoading(true, `Searching "${query}"...`);
+            document.getElementById('feed-heading').textContent = `Results for "${query}"`;
+
+            try {
+                let results = [];
+                if (state.searchMode === 'youtube' && state.ytApiKey) {
+                    results = await searchViaYouTubeAPI(query, state.ytApiKey);
+                    document.getElementById('source-indicator').textContent = 'YouTube Data API v3';
+                } else {
+                    results = await searchViaPublicRelays(query);
+                }
+
+                if (results && results.length > 0) {
+                    state.currentVideos = results;
+                    renderVideoGrid(results);
+                } else {
+                    throw new Error('No results returned from relays.');
+                }
+            } catch (err) {
+                console.warn('Live search fallback triggered:', err);
+                // Filter local starter library as graceful fallback
+                const fallbackMatches = STARTER_VIDEOS.filter(v =>
+                    v.title.toLowerCase().includes(query.toLowerCase()) ||
+                    v.channel.toLowerCase().includes(query.toLowerCase()) ||
+                    v.category.toLowerCase().includes(query.toLowerCase())
+                );
+                document.getElementById('source-indicator').textContent = 'Offline Fallback Filter';
+                if (fallbackMatches.length > 0) {
+                    renderVideoGrid(fallbackMatches);
+                    showToast('Public relays busy — showing matching offline videos.', 'info');
+                } else {
+                    renderEmptySearchState(query);
+                    showToast('Public relays temporarily rate-limited. Try pasting a YouTube URL or adding an API key in Settings.', 'error');
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        /**
+         * Queries public Piped & Invidious instances sequentially with timeout failover
+         */
+        async function searchViaPublicRelays(query) {
+            for (const relay of PUBLIC_RELAYS) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5500);
+
+                    const endpoint = relay.type === 'piped'
+                        ? `${relay.url}/search?q=${encodeURIComponent(query)}&filter=videos`
+                        : `${relay.url}/api/v1/search?q=${encodeURIComponent(query)}&type=video`;
+
+                    const response = await fetch(endpoint, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) continue;
+                    const data = await response.json();
+
+                    if (relay.type === 'piped' && Array.isArray(data.items)) {
+                        const parsed = data.items
+                            .filter(item => item.type === 'stream' && item.url)
+                            .map(item => {
+                                const idMatch = item.url.match(/v=([^&]+)/);
+                                const vidId = idMatch ? idMatch[1] : null;
+                                if (!vidId) return null;
+                                return {
+                                    id: vidId,
+                                    title: item.title || 'Untitled Video',
+                                    channel: item.uploaderName || 'Unknown Creator',
+                                    views: item.views ? formatViews(item.views) : 'YouTube',
+                                    uploaded: item.uploadedDate || '',
+                                    duration: item.duration ? formatDuration(item.duration) : 'HD',
+                                    category: 'Search'
+                                };
+                            })
+                            .filter(Boolean);
+
+                        if (parsed.length > 0) {
+                            document.getElementById('source-indicator').textContent = `Relay: ${new URL(relay.url).hostname}`;
+                            return parsed;
+                        }
+                    }
+
+                    if (relay.type === 'invidious' && Array.isArray(data)) {
+                        const parsed = data
+                            .filter(item => item.type === 'video' && item.videoId)
+                            .map(item => ({
+                                id: item.videoId,
+                                title: item.title || 'Untitled Video',
+                                channel: item.author || 'Unknown Creator',
+                                views: item.viewCount ? formatViews(item.viewCount) : 'YouTube',
+                                uploaded: item.publishedText || '',
+                                duration: item.lengthSeconds ? formatDuration(item.lengthSeconds) : 'HD',
+                                category: 'Search'
+                            }));
+
+                        if (parsed.length > 0) {
+                            document.getElementById('source-indicator').textContent = `Relay: ${new URL(relay.url).hostname}`;
+                            return parsed;
+                        }
+                    }
+                } catch (e) {
+                    // Try next relay in chain
+                    continue;
+                }
+            }
+            throw new Error('All public relays failed or timed out.');
+        }
+
+        /**
+         * Queries Official YouTube Data API v3 when user supplies their own key
+         */
+        async function searchViaYouTubeAPI(query, apiKey) {
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=16&q=${encodeURIComponent(query)}&key=${encodeURIComponent(apiKey)}`;
+            const res = await fetch(url);
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData?.error?.message || 'YouTube API request failed');
+            }
+            const data = await res.json();
+            return (data.items || []).map(item => ({
+                id: item.id.videoId,
+                title: decodeHTMLEntities(item.snippet.title),
+                channel: item.snippet.channelTitle,
+                views: 'Official API',
+                uploaded: new Date(item.snippet.publishedAt).toLocaleDateString(),
+                duration: 'HD',
+                category: 'YouTube API'
+            }));
+        }
+
+        /**
+         * Plays a video inside the embedded theater player
+         */
+        function playVideo(video) {
+            state.activeVideo = video;
+            const playerSection = document.getElementById('player-section');
+            const iframe = document.getElementById('yt-iframe');
+
+            // Use privacy-enhanced nocookie embed domain
+            iframe.src = `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0&modestbranding=1`;
+
+            document.getElementById('player-title').textContent = video.title;
+            document.getElementById('player-channel').textContent = video.channel;
+            document.getElementById('player-meta').textContent = `${video.views || 'YouTube'} ${video.uploaded ? '• ' + video.uploaded : ''}`;
+            document.getElementById('player-id-tag').textContent = `ID: ${video.id}`;
+
+            updatePlayerBookmarkButton();
+            playerSection.classList.remove('hidden');
+            playerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function closePlayer() {
+            const playerSection = document.getElementById('player-section');
+            const iframe = document.getElementById('yt-iframe');
+            iframe.src = '';
+            state.activeVideo = null;
+            playerSection.classList.add('hidden');
+        }
+
+        function toggleTheaterMode() {
+            state.theaterMode = !state.theaterMode;
+            const stageCol = document.getElementById('player-stage-col');
+            const queueCol = document.getElementById('player-queue-col');
+            const label = document.getElementById('theater-label');
+
+            if (state.theaterMode) {
+                stageCol.classList.remove('lg:col-span-8');
+                stageCol.classList.add('lg:col-span-12');
+                queueCol.classList.remove('lg:col-span-4');
+                queueCol.classList.add('lg:col-span-12');
+                label.textContent = 'Default View';
+            } else {
+                stageCol.classList.remove('lg:col-span-12');
+                stageCol.classList.add('lg:col-span-8');
+                queueCol.classList.remove('lg:col-span-12');
+                queueCol.classList.add('lg:col-span-4');
+                label.textContent = 'Wide Mode';
+            }
+        }
+
+        /**
+         * Renders the responsive video card grid
+         */
+        function renderVideoGrid(videos) {
+            const grid = document.getElementById('video-grid');
+            grid.innerHTML = '';
+
+            videos.forEach(video => {
+                const isSaved = state.savedVideos.some(v => v.id === video.id);
+                const card = document.createElement('article');
+                card.className = 'group glass-panel rounded-2xl overflow-hidden flex flex-col justify-between hover:border-cyan-500/40 hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-black/30';
+
+                // High-quality YouTube thumbnail URL with fallback
+                const thumbUrl = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer" onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'>
+                            <img 
+                                src="${thumbUrl}" 
+                                alt="${escapeHTML(video.title)}"
+                                loading="lazy"
+                                onerror="this.onerror=null;this.src='https://placehold.co/640x360/0F172A/06B6D4?text=StreamSlate+Video';"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            >
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-60 group-hover:opacity-30 transition-opacity"></div>
+                            <span class="absolute bottom-2 right-2 bg-slate-950/90 text-slate-100 font-mono text-[11px] font-medium px-2 py-0.5 rounded-md border border-slate-700/70">
+                                ${escapeHTML(video.duration || 'HD')}
+                            </span>
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="w-12 h-12 rounded-full bg-cyan-500/90 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                                    <svg class="w-6 h-6 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-3.5 space-y-1.5">
+                            <h3 
+                                onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'
+                                class="text-sm font-semibold text-slate-100 group-hover:text-cyan-300 line-clamp-2 cursor-pointer leading-snug transition-colors"
+                            >
+                                ${escapeHTML(video.title)}
+                            </h3>
+                            <p class="text-xs text-slate-400 font-medium truncate">${escapeHTML(video.channel)}</p>
+                            <p class="text-[11px] text-slate-500">${escapeHTML(video.views || '')} ${video.uploaded ? '• ' + escapeHTML(video.uploaded) : ''}</p>
+                        </div>
+                    </div>
+                    <div class="px-3.5 pb-3.5 pt-1 flex items-center gap-2">
+                        <button 
+                            onclick='addToQueue(${JSON.stringify(video).replace(/'/g, "&#39;")})'
+                            class="flex-1 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/70 transition-all flex items-center justify-center gap-1"
+                        >
+                            <span>+ Queue</span>
+                        </button>
+                        <button 
+                            onclick='toggleSaveVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'
+                            class="py-1.5 px-2.5 rounded-lg text-xs font-medium border transition-all ${isSaved ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-slate-800/90 hover:bg-slate-700 border-slate-700/70 text-slate-300'}"
+                            title="${isSaved ? 'Remove from Saved' : 'Save to Watchlist'}"
+                        >
+                            ${isSaved ? 'Saved' : 'Save'}
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderEmptySearchState(query) {
+            const grid = document.getElementById('video-grid');
+            grid.innerHTML = `
+                <div class="col-span-full glass-panel rounded-2xl p-8 text-center space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 text-cyan-400 mx-auto flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold text-white">No live results for "${escapeHTML(query)}"</h3>
+                    <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                        Public search relays may be rate-limited right now. You can paste any YouTube video URL directly into the search bar to play it immediately, or add a free YouTube Data API key in Settings.
+                    </p>
+                    <div class="pt-2 flex justify-center gap-2">
+                        <button onclick="resetHome()" class="px-4 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200">Back to Featured</button>
+                        <button onclick="toggleModal('settings-modal', true)" class="px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950">Open Settings</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Category Filtering & Reset
+         */
+        function selectCategory(category) {
+            state.activeCategory = category;
+            switchTab('explore');
+
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                const isMatch = btn.dataset.cat === category;
+                btn.className = isMatch
+                    ? 'cat-pill active shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-cyan-500 text-slate-950 shadow-sm transition-all'
+                    : 'cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all';
+            });
+
+            if (category === 'All') {
+                state.currentVideos = [...STARTER_VIDEOS];
+                document.getElementById('feed-heading').textContent = 'Featured & Curated Streams';
+                document.getElementById('source-indicator').textContent = 'Offline Starter Library';
+                renderVideoGrid(state.currentVideos);
+            } else {
+                const filtered = STARTER_VIDEOS.filter(v => v.category === category);
+                state.currentVideos = filtered;
+                document.getElementById('feed-heading').textContent = category;
+                document.getElementById('source-indicator').textContent = 'Curated Category';
+                renderVideoGrid(filtered);
+            }
+        }
+
+        function resetHome() {
+            clearSearchInput();
+            selectCategory('All');
+        }
+
+        function clearSearchInput() {
+            const input = document.getElementById('search-input');
+            input.value = '';
+            document.getElementById('clear-search-btn').classList.add('hidden');
+        }
+
+        /**
+         * Queue & Watchlist Management (Persisted in localStorage)
+         */
+        function addToQueue(video) {
+            if (!state.queue.some(v => v.id === video.id)) {
+                state.queue.push(video);
+                localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
+                renderQueue();
+                showToast(`Added "${video.title.slice(0, 32)}..." to Queue`, 'success');
+            } else {
+                showToast('Video is already in your queue.', 'info');
+            }
+        }
+
+        function removeFromQueue(id) {
+            state.queue = state.queue.filter(v => v.id !== id);
+            localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
+            renderQueue();
+        }
+
+        function playNextInQueue() {
+            if (state.queue.length === 0) {
+                showToast('Your Up Next queue is empty.', 'info');
+                return;
+            }
+            const nextVideo = state.queue.shift();
+            localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
+            renderQueue();
+            playVideo(nextVideo);
+        }
+
+        function renderQueue() {
+            const container = document.getElementById('queue-list-container');
+            document.getElementById('queue-count').textContent = state.queue.length;
+
+            if (state.queue.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 px-4 text-xs text-slate-500 space-y-1">
+                        <p class="font-medium text-slate-400">Queue is empty</p>
+                        <p>Click "+ Queue" on any video card to line up videos.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.queue.map(video => `
+                <div class="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 group transition-all">
+                    <img 
+                        src="https://i.ytimg.com/vi/${video.id}/default.jpg" 
+                        alt="" 
+                        onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'
+                        class="w-20 h-12 object-cover rounded-lg cursor-pointer shrink-0 bg-slate-950"
+                    >
+                    <div class="flex-1 min-w-0 cursor-pointer" onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'>
+                        <p class="text-xs font-medium text-slate-200 group-hover:text-cyan-300 truncate">${escapeHTML(video.title)}</p>
+                        <p class="text-[11px] text-slate-400 truncate">${escapeHTML(video.channel)}</p>
+                    </div>
+                    <button onclick="removeFromQueue('${video.id}')" title="Remove" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function toggleSaveVideo(video) {
+            const exists = state.savedVideos.some(v => v.id === video.id);
+            if (exists) {
+                state.savedVideos = state.savedVideos.filter(v => v.id !== video.id);
+                showToast('Removed from Saved Watchlist', 'info');
+            } else {
+                state.savedVideos.unshift(video);
+                showToast('Saved to Watchlist', 'success');
+            }
+            localStorage.setItem('streamslate_saved', JSON.stringify(state.savedVideos));
+            updateSavedBadge();
+            updatePlayerBookmarkButton();
+            renderVideoGrid(state.currentVideos);
+            renderSavedGrid();
+        }
+
+        function toggleBookmarkCurrent() {
+            if (state.activeVideo) {
+                toggleSaveVideo(state.activeVideo);
+            }
+        }
+
+        function updatePlayerBookmarkButton() {
+            if (!state.activeVideo) return;
+            const isSaved = state.savedVideos.some(v => v.id === state.activeVideo.id);
+            const btn = document.getElementById('player-bookmark-btn');
+            const label = document.getElementById('player-bookmark-label');
+            if (isSaved) {
+                btn.classList.add('bg-cyan-500/20', 'border-cyan-500/50', 'text-cyan-300');
+                label.textContent = 'Saved';
+            } else {
+                btn.classList.remove('bg-cyan-500/20', 'border-cyan-500/50', 'text-cyan-300');
+                label.textContent = 'Save';
+            }
+        }
+
+        function updateSavedBadge() {
+            document.getElementById('saved-count-badge').textContent = state.savedVideos.length;
+        }
+
+        function renderSavedGrid() {
+            const grid = document.getElementById('saved-grid');
+            if (state.savedVideos.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full glass-panel rounded-2xl p-10 text-center space-y-2">
+                        <p class="text-sm font-semibold text-slate-300">No saved videos yet</p>
+                        <p class="text-xs text-slate-500">Click "Save" on any video card or in the player toolbar to bookmark it here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = '';
+            state.savedVideos.forEach(video => {
+                const card = document.createElement('article');
+                card.className = 'group glass-panel rounded-2xl overflow-hidden flex flex-col justify-between border border-slate-800 hover:border-cyan-500/40 transition-all';
+                card.innerHTML = `
+                    <div>
+                        <div class="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer" onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'>
+                            <img src="https://i.ytimg.com/vi/${video.id}/hqdefault.jpg" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+                            <span class="absolute bottom-2 right-2 bg-slate-950/90 text-slate-100 font-mono text-[11px] px-2 py-0.5 rounded-md">${escapeHTML(video.duration || 'HD')}</span>
+                        </div>
+                        <div class="p-3.5 space-y-1">
+                            <h3 onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="text-sm font-semibold text-slate-100 hover:text-cyan-300 line-clamp-2 cursor-pointer">${escapeHTML(video.title)}</h3>
+                            <p class="text-xs text-slate-400 truncate">${escapeHTML(video.channel)}</p>
+                        </div>
+                    </div>
+                    <div class="px-3.5 pb-3.5 flex items-center gap-2">
+                        <button onclick='addToQueue(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="flex-1 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200">+ Queue</button>
+                        <button onclick='toggleSaveVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="py-1.5 px-3 rounded-lg text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300">Remove</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        /**
+         * Export / Import JSON Watchlist
+         */
+        function exportLibraryJSON() {
+            const payload = JSON.stringify({ savedVideos: state.savedVideos, queue: state.queue }, null, 2);
+            const blob = new Blob([payload], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'streamslate-watchlist.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Exported watchlist JSON', 'success');
+        }
+
+        function importLibraryJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (Array.isArray(parsed.savedVideos)) {
+                        state.savedVideos = parsed.savedVideos;
+                        localStorage.setItem('streamslate_saved', JSON.stringify(state.savedVideos));
+                    }
+                    if (Array.isArray(parsed.queue)) {
+                        state.queue = parsed.queue;
+                        localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
+                    }
+                    updateSavedBadge();
+                    renderSavedGrid();
+                    renderQueue();
+                    showToast('Watchlist imported successfully', 'success');
+                } catch (err) {
+                    showToast('Invalid JSON file format', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearSavedLibrary() {
+            state.savedVideos = [];
+            localStorage.setItem('streamslate_saved', '[]');
+            updateSavedBadge();
+            renderSavedGrid();
+            renderVideoGrid(state.currentVideos);
+            showToast('Cleared saved watchlist', 'info');
+        }
+
+        /**
+         * Tab Navigation & Settings Modal
+         */
+        function switchTab(tab) {
+            const exploreView = document.getElementById('explore-view');
+            const libraryView = document.getElementById('library-view');
+            const exploreBtn = document.getElementById('nav-explore-btn');
+            const libraryBtn = document.getElementById('nav-library-btn');
+
+            if (tab === 'explore') {
+                exploreView.classList.remove('hidden');
+                libraryView.classList.add('hidden');
+                exploreBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
+                libraryBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 border border-transparent flex items-center gap-1.5';
+            } else {
+                exploreView.classList.add('hidden');
+                libraryView.classList.remove('hidden');
+                libraryBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5';
+                exploreBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 border border-transparent';
+                renderSavedGrid();
+            }
+        }
+
+        function toggleModal(id, show) {
+            const modal = document.getElementById(id);
+            if (show) {
+                updateSettingsUI();
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function setSearchMode(mode) {
+            state.searchMode = mode;
+            updateSettingsUI();
+        }
+
+        function updateSettingsUI() {
+            const publicBtn = document.getElementById('mode-public-btn');
+            const ytBtn = document.getElementById('mode-youtube-btn');
+            const keyInput = document.getElementById('yt-api-key-input');
+            const badge = document.getElementById('api-badge');
+
+            keyInput.value = state.ytApiKey;
+
+            if (state.searchMode === 'youtube') {
+                ytBtn.className = 'p-3 rounded-xl border text-left transition-all bg-teal-500/15 border-teal-500 text-white';
+                publicBtn.className = 'p-3 rounded-xl border text-left transition-all bg-slate-900 border-slate-700 text-slate-300';
+                badge.textContent = 'YouTube API v3';
+            } else {
+                publicBtn.className = 'p-3 rounded-xl border text-left transition-all bg-cyan-500/15 border-cyan-500 text-white';
+                ytBtn.className = 'p-3 rounded-xl border text-left transition-all bg-slate-900 border-slate-700 text-slate-300';
+                badge.textContent = 'Public Relay';
+            }
+        }
+
+        function saveSettings() {
+            const keyVal = document.getElementById('yt-api-key-input').value.trim();
+            state.ytApiKey = keyVal;
+            if (state.searchMode === 'youtube' && !keyVal) {
+                showToast('Please enter a YouTube API v3 key or switch to Public Relay.', 'error');
+                return;
+            }
+            localStorage.setItem('streamslate_search_mode', state.searchMode);
+            localStorage.setItem('streamslate_yt_api_key', state.ytApiKey);
+            updateSettingsUI();
+            toggleModal('settings-modal', false);
+            showToast('Preferences saved', 'success');
+        }
+
+        /**
+         * Clipboard & Toast Helpers (No alert() used)
+         */
+        function copyShareLink() {
+            if (!state.activeVideo) return;
+            const shareUrl = `https://youtu.be/${state.activeVideo.id}`;
+            const tempInput = document.createElement('input');
+            tempInput.value = shareUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand('copy');
+                showToast(`Copied: ${shareUrl}`, 'success');
+            } catch (err) {
+                showToast('Unable to copy link', 'error');
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const borderClass = type === 'success' ? 'border-teal-500/50 text-teal-200' : type === 'error' ? 'border-rose-500/50 text-rose-200' : 'border-cyan-500/50 text-cyan-200';
+            toast.className = `pointer-events-auto glass-panel px-4 py-3 rounded-xl shadow-xl border ${borderClass} text-xs font-medium flex items-center justify-between gap-3 transition-all`;
+            toast.innerHTML = `<span>${escapeHTML(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        function setLoading(isLoading, text = 'Loading...') {
+            const spinner = document.getElementById('loading-spinner');
+            document.getElementById('loading-text').textContent = text;
+            spinner.classList.toggle('hidden', !isLoading);
+        }
+
+        function formatViews(num) {
+            if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M views';
+            if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K views';
+            return num + ' views';
+        }
+
+        function formatDuration(sec) {
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            const s = sec % 60;
+            if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            return `${m}:${String(s).padStart(2, '0')}`;
+        }
+
+        function escapeHTML(str) {
+            return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        function decodeHTMLEntities(text) {
+            const txt = document.createElement('textarea');
+            txt.innerHTML = text;
+            return txt.value;
+        }
+    </script>
+</body>
+</html>
