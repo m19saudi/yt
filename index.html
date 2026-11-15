@@ -2,8 +2,9 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamSlate — Embedded YouTube Desktop Client</title>
+    <!-- Viewport locked to desktop width so Android desktop mode renders full desktop UI -->
+    <meta name="viewport" content="width=1280, initial-scale=1.0">
+    <title>StreamSlate — Desktop YouTube Client</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & JetBrains Mono -->
@@ -32,11 +33,11 @@
         }
     </script>
     <style>
-        /* Custom Cyber-Slate Scrollbars & Glassmorphism Utilities */
         body {
             background-color: #0B0F19;
             color: #F8FAFC;
-            overflow-x: hidden;
+            overflow-x: auto;
+            min-width: 1200px;
         }
         ::-webkit-scrollbar {
             width: 8px;
@@ -54,30 +55,33 @@
             background: #334155;
         }
         .glass-header {
-            background: rgba(11, 15, 25, 0.85);
+            background: rgba(11, 15, 25, 0.92);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             border-bottom: 1px solid rgba(148, 163, 184, 0.12);
         }
         .glass-panel {
-            background: rgba(15, 23, 42, 0.78);
+            background: rgba(15, 23, 42, 0.82);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(148, 163, 184, 0.12);
         }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
+        .sidebar-item {
+            transition: all 0.15s ease;
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .sidebar-item:hover {
+            background: rgba(30, 41, 59, 0.7);
         }
-        /* Smooth Aspect Ratio Wrapper for Iframe */
+        .sidebar-item.active {
+            background: rgba(6, 182, 212, 0.15);
+            color: #22d3ee;
+            border-right: 3px solid #06B6D4;
+        }
         .player-aspect {
             position: relative;
             width: 100%;
             padding-bottom: 56.25%;
-            background: #050811;
+            background: #000;
         }
         .player-aspect iframe {
             position: absolute;
@@ -92,243 +96,248 @@
 <body class="min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
 
     <!-- Toast Notification Container (Replaces alert()) -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
 
-    <!-- Top Sticky Glassmorphic Navigation -->
-    <header class="glass-header sticky top-0 z-40 w-full">
-        <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-            
-            <!-- Brand Logo & Status -->
-            <div class="flex items-center gap-3">
-                <button onclick="resetHome()" class="flex items-center gap-2.5 group focus:outline-none text-left">
-                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
-                        <svg class="w-5 h-5 text-slate-950 fill-current" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">StreamSlate</span>
-                        <span id="api-badge" class="hidden sm:inline-block ml-2 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Public Relay</span>
-                    </div>
-                </button>
-            </div>
-
-            <!-- Search Bar & Direct URL Input -->
-            <form id="search-form" class="order-3 md:order-2 w-full md:flex-1 md:max-w-2xl flex items-center">
-                <div class="relative w-full flex items-center">
-                    <div class="absolute left-3.5 text-slate-400 pointer-events-none">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                        </svg>
-                    </div>
-                    <input 
-                        type="text" 
-                        id="search-input" 
-                        placeholder="Search YouTube or paste any youtube.com / youtu.be link..." 
-                        autocomplete="off"
-                        class="w-full bg-slate-900/90 text-slate-100 placeholder-slate-400 text-sm rounded-l-xl pl-10 pr-9 py-2.5 border border-slate-700/70 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
-                    >
-                    <button 
-                        type="button" 
-                        id="clear-search-btn" 
-                        onclick="clearSearchInput()"
-                        title="Clear search"
-                        class="hidden absolute right-2 text-slate-400 hover:text-slate-200 p-1 rounded-lg"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path d="M18 6 6 18M6 6l12 12"/>
-                        </svg>
-                    </button>
+    <!-- Top Desktop YouTube Header -->
+    <header class="glass-header sticky top-0 z-50 w-full h-14 px-4 flex items-center justify-between gap-4">
+        
+        <!-- Left: Hamburger & Logo -->
+        <div class="flex items-center gap-4 shrink-0">
+            <button onclick="toggleSidebar()" class="p-2 rounded-xl text-slate-300 hover:bg-slate-800 transition-colors" title="Toggle Sidebar">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M3 12h18M3 6h18M3 18h18"/>
+                </svg>
+            </button>
+            <button onclick="navigateHome()" class="flex items-center gap-2.5 group focus:outline-none">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-md shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+                    <svg class="w-4 h-4 text-slate-950 fill-current" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
                 </div>
-                <button 
-                    type="submit" 
-                    class="bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-r-xl transition-all shadow-md shadow-cyan-500/10 flex items-center gap-1.5 shrink-0"
-                >
-                    <span>Search</span>
-                </button>
-            </form>
+                <div class="flex items-center gap-1.5">
+                    <span class="font-bold text-base tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">StreamSlate</span>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Desktop</span>
+                </div>
+            </button>
+        </div>
 
-            <!-- Action Controls: Library/Queue & Settings -->
-            <div class="order-2 md:order-3 flex items-center gap-2">
-                <button 
-                    id="nav-explore-btn"
-                    onclick="switchTab('explore')"
-                    class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+        <!-- Center: Search & Direct URL Input Form -->
+        <form id="search-form" class="flex-1 max-w-2xl flex items-center">
+            <div class="relative w-full flex items-center">
+                <div class="absolute left-3.5 text-slate-400 pointer-events-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Search YouTube or paste any youtube.com / youtu.be link..." 
+                    autocomplete="off"
+                    class="w-full bg-slate-900/95 text-slate-100 placeholder-slate-400 text-sm rounded-l-full pl-10 pr-9 py-2 border border-slate-700/80 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none transition-all"
                 >
-                    Explore
-                </button>
                 <button 
-                    id="nav-library-btn"
-                    onclick="switchTab('library')"
-                    class="px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 border border-transparent flex items-center gap-1.5"
-                >
-                    <span>Saved & Queue</span>
-                    <span id="saved-count-badge" class="bg-slate-800 text-cyan-400 font-mono text-xs px-1.5 py-0.2 rounded-md">0</span>
-                </button>
-                <button 
-                    onclick="toggleModal('settings-modal', true)"
-                    title="API & Playback Settings"
-                    class="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 border border-slate-700/70 transition-all"
+                    type="button" 
+                    id="clear-search-btn" 
+                    onclick="clearSearchInput()"
+                    class="hidden absolute right-2 text-slate-400 hover:text-slate-200 p-1"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M18 6 6 18M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
-        </div>
+            <button 
+                type="submit" 
+                class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-cyan-400 text-sm px-6 py-2 rounded-r-full border-t border-r border-b border-slate-700/80 transition-all flex items-center justify-center shrink-0"
+                title="Search"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+            </button>
+        </form>
 
-        <!-- Category Filter Pills -->
-        <div id="category-bar" class="max-w-[1600px] mx-auto px-4 sm:px-6 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <button data-cat="All" onclick="selectCategory('All')" class="cat-pill active shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-cyan-500 text-slate-950 shadow-sm transition-all">All</button>
-            <button data-cat="Coding & CS" onclick="selectCategory('Coding & CS')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Coding & CS</button>
-            <button data-cat="Tech & Hardware" onclick="selectCategory('Tech & Hardware')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Tech & Hardware</button>
-            <button data-cat="Ambient Focus" onclick="selectCategory('Ambient Focus')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Ambient Focus</button>
-            <button data-cat="Science & Space" onclick="selectCategory('Science & Space')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Science & Space</button>
-            <button data-cat="Design & UI" onclick="selectCategory('Design & UI')" class="cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all">Design & UI</button>
+        <!-- Right: Actions & Settings -->
+        <div class="flex items-center gap-2 shrink-0">
+            <button 
+                onclick="toggleModal('settings-modal', true)"
+                title="API & Settings"
+                class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 border border-slate-700/70 transition-all flex items-center gap-1.5 text-xs font-medium px-3"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>Settings</span>
+            </button>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-teal-400 flex items-center justify-center font-bold text-slate-950 text-xs shadow-inner">
+                DS
+            </div>
         </div>
     </header>
 
-    <!-- Main Content Workspace -->
-    <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+    <!-- Main Desktop Workspace (Sidebar + Content) -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Desktop Sidebar -->
+        <aside id="desktop-sidebar" class="w-64 glass-header flex flex-col shrink-0 overflow-y-auto select-none border-r border-slate-800/80 p-3 space-y-1">
+            <div class="space-y-1 pb-3 border-b border-slate-800/80">
+                <button onclick="switchTab('explore'); selectCategory('All')" id="sidebar-home" class="sidebar-item active w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left">
+                    <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span>Home</span>
+                </button>
+                <button onclick="switchTab('explore'); selectCategory('Coding & CS')" class="sidebar-item w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white text-left">
+                    <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>Coding & CS</span>
+                </button>
+                <button onclick="switchTab('explore'); selectCategory('Ambient Focus')" class="sidebar-item w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white text-left">
+                    <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    <span>Ambient Focus</span>
+                </button>
+                <button onclick="switchTab('explore'); selectCategory('Science & Space')" class="sidebar-item w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white text-left">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <span>Science & Space</span>
+                </button>
+            </div>
 
-        <!-- In-Page Theater Video Player Section (Hidden until a video is selected) -->
-        <section id="player-section" class="hidden glass-panel rounded-2xl overflow-hidden shadow-2xl shadow-black/60 border border-cyan-500/20 transition-all">
-            <div id="player-layout-grid" class="grid grid-cols-1 lg:grid-cols-12">
-                
-                <!-- Video Stage -->
-                <div id="player-stage-col" class="lg:col-span-8 bg-black flex flex-col">
-                    <div class="player-aspect">
-                        <iframe 
-                            id="yt-iframe"
-                            src=""
-                            title="YouTube Embedded Player"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowfullscreen>
-                        </iframe>
+            <!-- Library & Playlists Section -->
+            <div class="pt-3 pb-3 border-b border-slate-800/80 space-y-1">
+                <div class="px-3.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Library & Saved</div>
+                <button onclick="switchTab('library')" id="sidebar-library" class="sidebar-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white text-left">
+                    <div class="flex items-center gap-4">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                        <span>Watch Later</span>
                     </div>
-                    
-                    <!-- Player Metadata & Action Toolbar -->
-                    <div class="p-4 sm:p-5 bg-slate-900/95 border-t border-slate-800/80 flex flex-col gap-3">
-                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                            <div class="space-y-1">
-                                <h1 id="player-title" class="text-base sm:text-lg font-bold text-white leading-snug">Video Title</h1>
-                                <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                                    <span id="player-channel" class="text-cyan-400 font-medium">Channel Name</span>
-                                    <span>•</span>
-                                    <span id="player-meta">Views • Date</span>
-                                    <span>•</span>
-                                    <span id="player-id-tag" class="font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">ID: ---</span>
+                    <span id="saved-count-sidebar" class="bg-slate-800 text-cyan-400 font-mono text-[11px] px-1.5 py-0.2 rounded">0</span>
+                </button>
+            </div>
+
+            <!-- Active Queue Section in Sidebar -->
+            <div class="pt-3 space-y-2 flex-1">
+                <div class="flex items-center justify-between px-3.5">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Up Next Queue</span>
+                    <span id="sidebar-queue-count" class="text-[11px] font-mono text-slate-400">0</span>
+                </div>
+                <div id="sidebar-queue-list" class="space-y-1.5 px-1 max-h-64 overflow-y-auto">
+                    <!-- Queue items injected here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Desktop Content Area -->
+        <main class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+
+            <!-- Watch Page View (Hidden until video is played) -->
+            <div id="watch-view" class="hidden grid grid-cols-1 xl:grid-cols-12 gap-6">
+                
+                <!-- Left Column: Video Stage & Metadata -->
+                <div class="xl:col-span-8 flex flex-col gap-4">
+                    <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-cyan-500/20 bg-black">
+                        <div class="player-aspect">
+                            <iframe 
+                                id="yt-iframe"
+                                src=""
+                                title="YouTube Embedded Player"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                    </div>
+
+                    <!-- Video Metadata & Toolbar -->
+                    <div class="glass-panel rounded-2xl p-5 space-y-4">
+                        <h1 id="watch-title" class="text-lg sm:text-xl font-bold text-white leading-snug">Video Title</h1>
+                        <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 flex items-center justify-center font-bold text-slate-950 text-sm" id="channel-avatar">
+                                    C
+                                </div>
+                                <div>
+                                    <h2 id="watch-channel" class="text-sm font-semibold text-slate-200">Channel Name</h2>
+                                    <p id="watch-meta" class="text-xs text-slate-400">Views • Date</p>
                                 </div>
                             </div>
 
-                            <!-- Toolbar Controls -->
-                            <div class="flex flex-wrap items-center gap-2 shrink-0">
-                                <button onclick="toggleBookmarkCurrent()" id="player-bookmark-btn" class="px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
-                                    </svg>
-                                    <span id="player-bookmark-label">Save</span>
+                            <!-- Actions Toolbar -->
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleBookmarkActive()" id="watch-save-btn" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                                    <span id="watch-save-label">Save</span>
                                 </button>
-                                
-                                <button onclick="copyShareLink()" class="px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                                    </svg>
-                                    <span>Copy Link</span>
+                                <button onclick="copyShareLink()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                    <span>Share</span>
                                 </button>
-
-                                <button onclick="toggleTheaterMode()" id="theater-btn" class="hidden lg:flex px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 items-center gap-1.5 transition-all">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <rect width="18" height="14" x="3" y="5" rx="2"/>
-                                    </svg>
-                                    <span id="theater-label">Wide Mode</span>
-                                </button>
-
-                                <button onclick="closePlayer()" class="px-3 py-2 rounded-xl text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 transition-all">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="M18 6 6 18M6 6l12 12"/>
-                                    </svg>
-                                    <span>Close</span>
+                                <button onclick="closeWatchView()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-all">
+                                    Back to Grid
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Up Next / Active Queue Sidebar -->
-                <div id="player-queue-col" class="lg:col-span-4 bg-slate-950/70 border-t lg:border-t-0 lg:border-l border-slate-800/80 flex flex-col max-h-[540px]">
-                    <div class="p-3.5 border-b border-slate-800/80 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-cyan-400">Up Next Queue</span>
-                            <span id="queue-count" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">0</span>
+                        <div class="bg-slate-900/80 rounded-xl p-3.5 text-xs text-slate-300 font-mono">
+                            <span class="text-cyan-400 font-semibold">Video ID:</span> <span id="watch-id-display">---</span>
                         </div>
-                        <button onclick="playNextInQueue()" class="text-xs text-teal-400 hover:text-teal-300 font-medium flex items-center gap-1">
-                            <span>Play Next</span>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div id="queue-list-container" class="flex-1 overflow-y-auto p-3 space-y-2.5">
-                        <!-- Queue items rendered dynamically -->
                     </div>
                 </div>
 
-            </div>
-        </section>
+                <!-- Right Column: Queue & Related Sidebar -->
+                <div class="xl:col-span-4 flex flex-col gap-4">
+                    <div class="glass-panel rounded-2xl p-4 flex flex-col h-full max-h-[700px]">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Up Next / Queue</span>
+                            <button onclick="playNextInQueue()" class="text-xs text-teal-400 hover:text-teal-300 font-medium">Play Next</button>
+                        </div>
+                        <div id="watch-queue-container" class="flex-1 overflow-y-auto py-3 space-y-2.5">
+                            <!-- Queue items injected here -->
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Explore View -->
-        <section id="explore-view" class="space-y-4">
-            <!-- Status Banner -->
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center gap-2.5">
-                    <h2 id="feed-heading" class="text-lg font-semibold text-white">Featured & Curated Streams</h2>
-                    <span id="source-indicator" class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700/70">Offline Starter Library</span>
-                </div>
-                <div id="loading-spinner" class="hidden flex items-center gap-2 text-xs text-cyan-400 font-medium">
-                    <svg class="animate-spin h-4 w-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span id="loading-text">Querying public relays...</span>
-                </div>
             </div>
 
-            <!-- Video Grid -->
-            <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                <!-- Video Cards injected here -->
-            </div>
-        </section>
-
-        <!-- Saved Watchlist & History View -->
-        <section id="library-view" class="hidden space-y-6">
-            <div class="glass-panel rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-lg font-bold text-white">Saved Watchlist & Local Queue</h2>
-                    <p class="text-xs text-slate-400 mt-0.5">Stored locally in your browser's storage. Export as JSON to back up or transfer across devices.</p>
+            <!-- Explore / Home Feed View -->
+            <div id="explore-view" class="space-y-6">
+                <!-- Category Chips Header -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1">
+                    <button data-cat="All" onclick="selectCategory('All')" class="cat-pill active shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-cyan-500 text-slate-950 shadow-sm transition-all">All</button>
+                    <button data-cat="Coding & CS" onclick="selectCategory('Coding & CS')" class="cat-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700/80 transition-all">Coding & CS</button>
+                    <button data-cat="Tech & Hardware" onclick="selectCategory('Tech & Hardware')" class="cat-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700/80 transition-all">Tech & Hardware</button>
+                    <button data-cat="Ambient Focus" onclick="selectCategory('Ambient Focus')" class="cat-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700/80 transition-all">Ambient Focus</button>
+                    <button data-cat="Science & Space" onclick="selectCategory('Science & Space')" class="cat-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700/80 transition-all">Science & Space</button>
+                    <button data-cat="Design & UI" onclick="selectCategory('Design & UI')" class="cat-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700/80 transition-all">Design & UI</button>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="exportLibraryJSON()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-all">
-                        Export JSON
-                    </button>
-                    <label class="px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 cursor-pointer transition-all">
-                        <span>Import JSON</span>
-                        <input type="file" accept=".json" onchange="importLibraryJSON(event)" class="hidden">
-                    </label>
-                    <button onclick="clearSavedLibrary()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-all">
-                        Clear All
-                    </button>
+
+                <div class="flex items-center justify-between">
+                    <h2 id="feed-heading" class="text-base font-bold text-white">Recommended Streams</h2>
+                    <span id="source-indicator" class="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-700/80">Desktop Feed</span>
+                </div>
+
+                <!-- Desktop 4-Column Video Grid -->
+                <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    <!-- Cards injected here -->
                 </div>
             </div>
 
-            <div id="saved-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                <!-- Saved video cards injected here -->
+            <!-- Saved Watch Later View -->
+            <div id="library-view" class="hidden space-y-6">
+                <div class="glass-panel rounded-2xl p-5 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Saved Watch Later Library</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Persisted in local browser storage.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="exportJSON()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700">Export JSON</button>
+                        <button onclick="clearLibrary()" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30">Clear All</button>
+                    </div>
+                </div>
+                <div id="saved-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    <!-- Saved cards injected here -->
+                </div>
             </div>
-        </section>
 
-    </main>
+        </main>
+    </div>
 
     <!-- Settings & API Configuration Modal -->
     <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
@@ -336,802 +345,424 @@
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-                    <h3 class="text-base font-bold text-white">Search Provider & API Settings</h3>
+                    <h3 class="text-base font-bold text-white">Desktop Client Settings</h3>
                 </div>
                 <button onclick="toggleModal('settings-modal', false)" class="text-slate-400 hover:text-white p-1 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M18 6 6 18M6 6l12 12"/>
-                    </svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <div class="space-y-4 text-sm">
-                <!-- Mode Selection -->
                 <div class="space-y-2">
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Active Search Engine</label>
                     <div class="grid grid-cols-2 gap-2.5">
                         <button type="button" id="mode-public-btn" onclick="setSearchMode('public')" class="p-3 rounded-xl border text-left transition-all bg-cyan-500/15 border-cyan-500 text-white">
                             <div class="font-semibold text-xs text-cyan-300">Public Relay Chain</div>
-                            <div class="text-[11px] text-slate-400 mt-0.5">Zero-key Piped & Invidious failover</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">Zero-key Piped & Invidious</div>
                         </button>
                         <button type="button" id="mode-youtube-btn" onclick="setSearchMode('youtube')" class="p-3 rounded-xl border text-left transition-all bg-slate-900 border-slate-700 text-slate-300">
                             <div class="font-semibold text-xs text-teal-300">YouTube Data API v3</div>
-                            <div class="text-[11px] text-slate-400 mt-0.5">Official Google API (requires key)</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">Official Google API Key</div>
                         </button>
                     </div>
                 </div>
 
-                <!-- Optional API Key Input -->
                 <div class="space-y-1.5">
-                    <label for="yt-api-key-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        YouTube Data API v3 Key (Optional)
-                    </label>
+                    <label for="yt-api-key-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-400">YouTube API Key (Optional)</label>
                     <input 
                         type="password" 
                         id="yt-api-key-input" 
                         placeholder="AIzaSy..." 
                         class="w-full bg-slate-950 text-slate-100 text-xs font-mono rounded-xl px-3.5 py-2.5 border border-slate-700 focus:border-cyan-500 focus:outline-none"
                     >
-                    <p class="text-[11px] text-slate-400 leading-relaxed">
-                        Your key is stored strictly in your browser's <code class="text-cyan-400">localStorage</code> and never sent anywhere except <code class="text-slate-300">googleapis.com</code>.
-                    </p>
-                </div>
-
-                <!-- Direct URL Tip -->
-                <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 space-y-1">
-                    <div class="font-semibold text-cyan-400">Instant Direct Playback Tip</div>
-                    <p class="text-slate-400 text-[11px]">
-                        Even without an API connection, pasting any <code class="text-slate-200">youtube.com/watch?v=...</code>, <code class="text-slate-200">youtu.be/...</code>, <code class="text-slate-200">/shorts/...</code>, or 11-character Video ID into the search bar launches it immediately.
-                    </p>
                 </div>
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                 <button onclick="toggleModal('settings-modal', false)" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800">Cancel</button>
-                <button onclick="saveSettings()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 shadow-md">Save Preferences</button>
+                <button onclick="saveSettings()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 shadow-md">Save Settings</button>
             </div>
         </div>
     </div>
 
     <script>
         /**
-         * StreamSlate — Single-File Embedded YouTube Client
-         * Architecture:
-         * 1. Offline Curated Starter Library (ensures immediate content on load)
-         * 2. Multi-endpoint CORS Failover Chain (Piped & Invidious JSON APIs)
-         * 3. Optional YouTube Data API v3 integration via localStorage
-         * 4. Direct YouTube URL / Video ID Parser
-         * 5. Privacy-enhanced youtube-nocookie.com Theater Player + Queue + Saved Watchlist
+         * StreamSlate — Desktop YouTube Client
          */
 
-        // Curated Starter Library (Reliable, verified educational, tech, and ambient streams)
         const STARTER_VIDEOS = [
-            {
-                id: 'jfKfPfyJRdk',
-                title: 'lofi hip hop radio 📚 beats to relax/study to',
-                channel: 'Lofi Girl',
-                views: 'LIVE',
-                uploaded: '24/7 Stream',
-                duration: 'LIVE',
-                category: 'Ambient Focus'
-            },
-            {
-                id: '8mAITcNt710',
-                title: 'Harvard CS50 (2023) – Full Computer Science University Course',
-                channel: 'freeCodeCamp.org',
-                views: '4.8M views',
-                uploaded: '1 year ago',
-                duration: '25:13:45',
-                category: 'Coding & CS'
-            },
-            {
-                id: 'PkZNo7MFNFg',
-                title: 'Learn JavaScript - Full Course for Beginners',
-                channel: 'freeCodeCamp.org',
-                views: '18M views',
-                uploaded: '5 years ago',
-                duration: '3:26:42',
-                category: 'Coding & CS'
-            },
-            {
-                id: '5qap5aO4i9A',
-                title: 'synthwave radio 🌌 beats to chill/game to',
-                channel: 'Lofi Girl',
-                views: 'LIVE',
-                uploaded: '24/7 Stream',
-                duration: 'LIVE',
-                category: 'Ambient Focus'
-            },
-            {
-                id: 'aircAruvnKk',
-                title: 'But what is a neural network? | Deep learning chapter 1',
-                channel: '3Blue1Brown',
-                views: '17M views',
-                uploaded: '6 years ago',
-                duration: '19:13',
-                category: 'Science & Space'
-            },
-            {
-                id: 'Tn6-PIqc4UM',
-                title: 'React in 100 Seconds',
-                channel: 'Fireship',
-                views: '1.4M views',
-                uploaded: '3 years ago',
-                duration: '2:18',
-                category: 'Coding & CS'
-            },
-            {
-                id: 'udFxKZRyQtE',
-                title: 'The Largest Black Hole in the Universe - Size Comparison',
-                channel: 'Kurzgesagt – In a Nutshell',
-                views: '26M views',
-                uploaded: '3 years ago',
-                duration: '12:08',
-                category: 'Science & Space'
-            },
-            {
-                id: 'M5QY2_8704o',
-                title: 'Chillstep Music for Programming / Cyber / Coding',
-                channel: 'BLUME',
-                views: '6.2M views',
-                uploaded: '4 years ago',
-                duration: '1:58:14',
-                category: 'Ambient Focus'
-            },
-            {
-                id: 'ysz5S6PUM-U',
-                title: 'How Linux Works Under the Hood',
-                channel: 'Tech Explained',
-                views: '920K views',
-                uploaded: '1 year ago',
-                duration: '18:45',
-                category: 'Tech & Hardware'
-            },
-            {
-                id: '_uQrJ0TkZlc',
-                title: 'Python Full Course for Beginners',
-                channel: 'Programming with Mosh',
-                views: '41M views',
-                uploaded: '5 years ago',
-                duration: '6:14:07',
-                category: 'Coding & CS'
-            },
-            {
-                id: 'c9Wg6Cb_YlU',
-                title: 'UI / UX Design Tutorial – Wireframe, Mockup & Design in Figma',
-                channel: 'freeCodeCamp.org',
-                views: '3.9M views',
-                uploaded: '3 years ago',
-                duration: '1:38:22',
-                category: 'Design & UI'
-            },
-            {
-                id: 'kqtD5dpn9C8',
-                title: 'Python for Beginners - Learn Python in 1 Hour',
-                channel: 'Programming with Mosh',
-                views: '19M views',
-                uploaded: '3 years ago',
-                duration: '1:00:05',
-                category: 'Tech & Hardware'
-            }
+            { id: 'jfKfPfyJRdk', title: 'lofi hip hop radio 📚 beats to relax/study to', channel: 'Lofi Girl', views: 'LIVE', uploaded: '24/7 Stream', duration: 'LIVE', category: 'Ambient Focus' },
+            { id: '8mAITcNt710', title: 'Harvard CS50 (2023) – Full Computer Science University Course', channel: 'freeCodeCamp.org', views: '4.8M views', uploaded: '1 year ago', duration: '25:13:45', category: 'Coding & CS' },
+            { id: 'PkZNo7MFNFg', title: 'Learn JavaScript - Full Course for Beginners', channel: 'freeCodeCamp.org', views: '18M views', uploaded: '5 years ago', duration: '3:26:42', category: 'Coding & CS' },
+            { id: '5qap5aO4i9A', title: 'synthwave radio 🌌 beats to chill/game to', channel: 'Lofi Girl', views: 'LIVE', uploaded: '24/7 Stream', duration: 'LIVE', category: 'Ambient Focus' },
+            { id: 'aircAruvnKk', title: 'But what is a neural network? | Deep learning chapter 1', channel: '3Blue1Brown', views: '17M views', uploaded: '6 years ago', duration: '19:13', category: 'Science & Space' },
+            { id: 'Tn6-PIqc4UM', title: 'React in 100 Seconds', channel: 'Fireship', views: '1.4M views', uploaded: '3 years ago', duration: '2:18', category: 'Coding & CS' },
+            { id: 'udFxKZRyQtE', title: 'The Largest Black Hole in the Universe - Size Comparison', channel: 'Kurzgesagt', views: '26M views', uploaded: '3 years ago', duration: '12:08', category: 'Science & Space' },
+            { id: 'M5QY2_8704o', title: 'Chillstep Music for Programming / Cyber / Coding', channel: 'BLUME', views: '6.2M views', uploaded: '4 years ago', duration: '1:58:14', category: 'Ambient Focus' },
+            { id: 'ysz5S6PUM-U', title: 'How Linux Works Under the Hood', channel: 'Tech Explained', views: '920K views', uploaded: '1 year ago', duration: '18:45', category: 'Tech & Hardware' },
+            { id: '_uQrJ0TkZlc', title: 'Python Full Course for Beginners', channel: 'Programming with Mosh', views: '41M views', uploaded: '5 years ago', duration: '6:14:07', category: 'Coding & CS' },
+            { id: 'c9Wg6Cb_YlU', title: 'UI / UX Design Tutorial – Wireframe, Mockup & Design in Figma', channel: 'freeCodeCamp.org', views: '3.9M views', uploaded: '3 years ago', duration: '1:38:22', category: 'Design & UI' },
+            { id: 'kqtD5dpn9C8', title: 'Python for Beginners - Learn Python in 1 Hour', channel: 'Programming with Mosh', views: '19M views', uploaded: '3 years ago', duration: '1:00:05', category: 'Tech & Hardware' }
         ];
 
-        // Public CORS-enabled Piped & Invidious API Endpoints for Zero-Setup Live Search
         const PUBLIC_RELAYS = [
             { type: 'piped', url: 'https://pipedapi.kavin.rocks' },
             { type: 'piped', url: 'https://pipedapi.adminforge.de' },
-            { type: 'piped', url: 'https://api.piped.yt' },
-            { type: 'invidious', url: 'https://inv.nadeko.net' },
-            { type: 'invidious', url: 'https://invidious.nerdvpn.de' },
-            { type: 'invidious', url: 'https://yewtu.be' }
+            { type: 'invidious', url: 'https://inv.nadeko.net' }
         ];
 
-        // Application State
         let state = {
             currentVideos: [...STARTER_VIDEOS],
             savedVideos: JSON.parse(localStorage.getItem('streamslate_saved') || '[]'),
             queue: JSON.parse(localStorage.getItem('streamslate_queue') || '[]'),
             activeVideo: null,
             activeCategory: 'All',
-            theaterMode: false,
             searchMode: localStorage.getItem('streamslate_search_mode') || 'public',
             ytApiKey: localStorage.getItem('streamslate_yt_api_key') || ''
         };
 
-        // Initialize UI on Load
         document.addEventListener('DOMContentLoaded', () => {
-            updateSavedBadge();
+            updateBadges();
             updateSettingsUI();
             renderVideoGrid(state.currentVideos);
-            renderQueue();
+            renderSidebarQueue();
 
-            // Search input clear button visibility
             const searchInput = document.getElementById('search-input');
             const clearBtn = document.getElementById('clear-search-btn');
             searchInput.addEventListener('input', () => {
                 clearBtn.classList.toggle('hidden', searchInput.value.trim() === '');
             });
 
-            // Search form submit
             document.getElementById('search-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 handleSearch(searchInput.value.trim());
             });
         });
 
-        /**
-         * Extracts an 11-character YouTube Video ID from any URL or direct ID string
-         */
         function extractYouTubeId(input) {
             if (!input) return null;
             const trimmed = input.trim();
-            // Direct 11-char ID check
-            if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
-                return trimmed;
-            }
-            // Match standard watch?v=, youtu.be/, /embed/, /shorts/, /live/
+            if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
             const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
             const match = trimmed.match(regex);
             return match ? match[1] : null;
         }
 
-        /**
-         * Handles Search Form Submission (Direct URL/ID detection OR Live API Search)
-         */
         async function handleSearch(query) {
             if (!query) {
-                resetHome();
+                navigateHome();
                 return;
             }
 
             switchTab('explore');
 
-            // 1. Check if input is a direct YouTube URL or Video ID
             const directId = extractYouTubeId(query);
             if (directId) {
-                const videoObj = {
-                    id: directId,
-                    title: `Direct YouTube Stream (${directId})`,
-                    channel: 'YouTube Embedded Player',
-                    views: 'Direct Link',
-                    uploaded: 'Instant Load',
-                    duration: 'HD',
-                    category: 'Direct'
-                };
+                const videoObj = { id: directId, title: `Direct Stream (${directId})`, channel: 'YouTube Desktop Player', views: 'Direct', duration: 'HD', category: 'Direct' };
                 playVideo(videoObj);
-                showToast(`Loaded Video ID: ${directId}`, 'success');
+                showToast(`Loaded ID: ${directId}`, 'success');
                 return;
             }
-
-            // 2. Otherwise perform live search
-            setLoading(true, `Searching "${query}"...`);
-            document.getElementById('feed-heading').textContent = `Results for "${query}"`;
 
             try {
                 let results = [];
                 if (state.searchMode === 'youtube' && state.ytApiKey) {
-                    results = await searchViaYouTubeAPI(query, state.ytApiKey);
-                    document.getElementById('source-indicator').textContent = 'YouTube Data API v3';
+                    results = await searchViaAPI(query, state.ytApiKey);
                 } else {
-                    results = await searchViaPublicRelays(query);
+                    results = await searchViaRelays(query);
                 }
 
-                if (results && results.length > 0) {
+                if (results.length > 0) {
                     state.currentVideos = results;
                     renderVideoGrid(results);
                 } else {
-                    throw new Error('No results returned from relays.');
+                    throw new Error('No results');
                 }
             } catch (err) {
-                console.warn('Live search fallback triggered:', err);
-                // Filter local starter library as graceful fallback
-                const fallbackMatches = STARTER_VIDEOS.filter(v =>
-                    v.title.toLowerCase().includes(query.toLowerCase()) ||
-                    v.channel.toLowerCase().includes(query.toLowerCase()) ||
-                    v.category.toLowerCase().includes(query.toLowerCase())
-                );
-                document.getElementById('source-indicator').textContent = 'Offline Fallback Filter';
-                if (fallbackMatches.length > 0) {
-                    renderVideoGrid(fallbackMatches);
-                    showToast('Public relays busy — showing matching offline videos.', 'info');
+                const fallback = STARTER_VIDEOS.filter(v => v.title.toLowerCase().includes(query.toLowerCase()) || v.channel.toLowerCase().includes(query.toLowerCase()));
+                if (fallback.length > 0) {
+                    renderVideoGrid(fallback);
+                    showToast('Public relay rate-limited — showing matching library items.', 'info');
                 } else {
-                    renderEmptySearchState(query);
-                    showToast('Public relays temporarily rate-limited. Try pasting a YouTube URL or adding an API key in Settings.', 'error');
+                    showToast('Search limit reached. Try pasting a direct YouTube URL.', 'error');
                 }
-            } finally {
-                setLoading(false);
             }
         }
 
-        /**
-         * Queries public Piped & Invidious instances sequentially with timeout failover
-         */
-        async function searchViaPublicRelays(query) {
+        async function searchViaRelays(query) {
             for (const relay of PUBLIC_RELAYS) {
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5500);
-
-                    const endpoint = relay.type === 'piped'
-                        ? `${relay.url}/search?q=${encodeURIComponent(query)}&filter=videos`
-                        : `${relay.url}/api/v1/search?q=${encodeURIComponent(query)}&type=video`;
-
-                    const response = await fetch(endpoint, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-
-                    if (!response.ok) continue;
-                    const data = await response.json();
-
-                    if (relay.type === 'piped' && Array.isArray(data.items)) {
-                        const parsed = data.items
-                            .filter(item => item.type === 'stream' && item.url)
-                            .map(item => {
-                                const idMatch = item.url.match(/v=([^&]+)/);
-                                const vidId = idMatch ? idMatch[1] : null;
-                                if (!vidId) return null;
-                                return {
-                                    id: vidId,
-                                    title: item.title || 'Untitled Video',
-                                    channel: item.uploaderName || 'Unknown Creator',
-                                    views: item.views ? formatViews(item.views) : 'YouTube',
-                                    uploaded: item.uploadedDate || '',
-                                    duration: item.duration ? formatDuration(item.duration) : 'HD',
-                                    category: 'Search'
-                                };
-                            })
-                            .filter(Boolean);
-
-                        if (parsed.length > 0) {
-                            document.getElementById('source-indicator').textContent = `Relay: ${new URL(relay.url).hostname}`;
-                            return parsed;
-                        }
+                    const res = await fetch(`${relay.url}/search?q=${encodeURIComponent(query)}&filter=videos`);
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    if (Array.isArray(data.items)) {
+                        return data.items.filter(i => i.type === 'stream' && i.url).map(i => {
+                            const idM = i.url.match(/v=([^&]+)/);
+                            return idM ? { id: idM[1], title: i.title, channel: i.uploaderName, views: i.views ? `${(i.views/1000).toFixed(0)}K views` : 'YouTube', duration: 'HD', category: 'Search' } : null;
+                        }).filter(Boolean);
                     }
-
-                    if (relay.type === 'invidious' && Array.isArray(data)) {
-                        const parsed = data
-                            .filter(item => item.type === 'video' && item.videoId)
-                            .map(item => ({
-                                id: item.videoId,
-                                title: item.title || 'Untitled Video',
-                                channel: item.author || 'Unknown Creator',
-                                views: item.viewCount ? formatViews(item.viewCount) : 'YouTube',
-                                uploaded: item.publishedText || '',
-                                duration: item.lengthSeconds ? formatDuration(item.lengthSeconds) : 'HD',
-                                category: 'Search'
-                            }));
-
-                        if (parsed.length > 0) {
-                            document.getElementById('source-indicator').textContent = `Relay: ${new URL(relay.url).hostname}`;
-                            return parsed;
-                        }
-                    }
-                } catch (e) {
-                    // Try next relay in chain
-                    continue;
-                }
+                } catch (e) { continue; }
             }
-            throw new Error('All public relays failed or timed out.');
+            throw new Error('All relays failed');
         }
 
-        /**
-         * Queries Official YouTube Data API v3 when user supplies their own key
-         */
-        async function searchViaYouTubeAPI(query, apiKey) {
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=16&q=${encodeURIComponent(query)}&key=${encodeURIComponent(apiKey)}`;
-            const res = await fetch(url);
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData?.error?.message || 'YouTube API request failed');
-            }
+        async function searchViaAPI(query, key) {
+            const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=16&q=${encodeURIComponent(query)}&key=${encodeURIComponent(key)}`);
+            if (!res.ok) throw new Error('API Error');
             const data = await res.json();
-            return (data.items || []).map(item => ({
-                id: item.id.videoId,
-                title: decodeHTMLEntities(item.snippet.title),
-                channel: item.snippet.channelTitle,
-                views: 'Official API',
-                uploaded: new Date(item.snippet.publishedAt).toLocaleDateString(),
+            return (data.items || []).map(i => ({
+                id: i.id.videoId,
+                title: i.snippet.title,
+                channel: i.snippet.channelTitle,
+                views: 'API',
                 duration: 'HD',
-                category: 'YouTube API'
+                category: 'API'
             }));
         }
 
-        /**
-         * Plays a video inside the embedded theater player
-         */
         function playVideo(video) {
             state.activeVideo = video;
-            const playerSection = document.getElementById('player-section');
+            const watchView = document.getElementById('watch-view');
+            const exploreView = document.getElementById('explore-view');
+            const libraryView = document.getElementById('library-view');
+            
+            exploreView.classList.add('hidden');
+            libraryView.classList.add('hidden');
+            watchView.classList.remove('hidden');
+
             const iframe = document.getElementById('yt-iframe');
+            const safeOrigin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : 'https://localhost';
+            iframe.src = `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(safeOrigin)}&rel=0&modestbranding=1`;
 
-            // Use privacy-enhanced nocookie embed domain
-            iframe.src = `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0&modestbranding=1`;
+            document.getElementById('watch-title').textContent = video.title;
+            document.getElementById('watch-channel').textContent = video.channel;
+            document.getElementById('watch-meta').textContent = `${video.views || 'YouTube'} • ${video.uploaded || 'Stream'}`;
+            document.getElementById('watch-id-display').textContent = video.id;
+            document.getElementById('channel-avatar').textContent = video.channel ? video.channel[0].toUpperCase() : 'Y';
 
-            document.getElementById('player-title').textContent = video.title;
-            document.getElementById('player-channel').textContent = video.channel;
-            document.getElementById('player-meta').textContent = `${video.views || 'YouTube'} ${video.uploaded ? '• ' + video.uploaded : ''}`;
-            document.getElementById('player-id-tag').textContent = `ID: ${video.id}`;
-
-            updatePlayerBookmarkButton();
-            playerSection.classList.remove('hidden');
-            playerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            updateWatchSaveButton();
+            renderWatchQueue();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function closePlayer() {
-            const playerSection = document.getElementById('player-section');
-            const iframe = document.getElementById('yt-iframe');
-            iframe.src = '';
-            state.activeVideo = null;
-            playerSection.classList.add('hidden');
+        function closeWatchView() {
+            document.getElementById('yt-iframe').src = '';
+            document.getElementById('watch-view').classList.add('hidden');
+            document.getElementById('explore-view').classList.remove('hidden');
         }
 
-        function toggleTheaterMode() {
-            state.theaterMode = !state.theaterMode;
-            const stageCol = document.getElementById('player-stage-col');
-            const queueCol = document.getElementById('player-queue-col');
-            const label = document.getElementById('theater-label');
-
-            if (state.theaterMode) {
-                stageCol.classList.remove('lg:col-span-8');
-                stageCol.classList.add('lg:col-span-12');
-                queueCol.classList.remove('lg:col-span-4');
-                queueCol.classList.add('lg:col-span-12');
-                label.textContent = 'Default View';
-            } else {
-                stageCol.classList.remove('lg:col-span-12');
-                stageCol.classList.add('lg:col-span-8');
-                queueCol.classList.remove('lg:col-span-12');
-                queueCol.classList.add('lg:col-span-4');
-                label.textContent = 'Wide Mode';
-            }
-        }
-
-        /**
-         * Renders the responsive video card grid
-         */
         function renderVideoGrid(videos) {
             const grid = document.getElementById('video-grid');
             grid.innerHTML = '';
-
             videos.forEach(video => {
                 const isSaved = state.savedVideos.some(v => v.id === video.id);
                 const card = document.createElement('article');
-                card.className = 'group glass-panel rounded-2xl overflow-hidden flex flex-col justify-between hover:border-cyan-500/40 hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-black/30';
-
-                // High-quality YouTube thumbnail URL with fallback
-                const thumbUrl = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
-
+                card.className = 'group glass-panel rounded-2xl overflow-hidden flex flex-col justify-between hover:border-cyan-500/40 hover:-translate-y-0.5 transition-all shadow-lg shadow-black/30';
                 card.innerHTML = `
                     <div>
                         <div class="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer" onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'>
-                            <img 
-                                src="${thumbUrl}" 
-                                alt="${escapeHTML(video.title)}"
-                                loading="lazy"
-                                onerror="this.onerror=null;this.src='https://placehold.co/640x360/0F172A/06B6D4?text=StreamSlate+Video';"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            >
-                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-60 group-hover:opacity-30 transition-opacity"></div>
-                            <span class="absolute bottom-2 right-2 bg-slate-950/90 text-slate-100 font-mono text-[11px] font-medium px-2 py-0.5 rounded-md border border-slate-700/70">
-                                ${escapeHTML(video.duration || 'HD')}
-                            </span>
-                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div class="w-12 h-12 rounded-full bg-cyan-500/90 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                                    <svg class="w-6 h-6 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                </div>
-                            </div>
+                            <img src="https://i.ytimg.com/vi/${video.id}/hqdefault.jpg" alt="" loading="lazy" onerror="this.src='https://placehold.co/640x360/0F172A/06B6D4?text=StreamSlate';" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+                            <span class="absolute bottom-2 right-2 bg-slate-950/90 text-slate-100 font-mono text-[11px] px-2 py-0.5 rounded border border-slate-700/70">${video.duration || 'HD'}</span>
                         </div>
-                        <div class="p-3.5 space-y-1.5">
-                            <h3 
-                                onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'
-                                class="text-sm font-semibold text-slate-100 group-hover:text-cyan-300 line-clamp-2 cursor-pointer leading-snug transition-colors"
-                            >
-                                ${escapeHTML(video.title)}
-                            </h3>
-                            <p class="text-xs text-slate-400 font-medium truncate">${escapeHTML(video.channel)}</p>
-                            <p class="text-[11px] text-slate-500">${escapeHTML(video.views || '')} ${video.uploaded ? '• ' + escapeHTML(video.uploaded) : ''}</p>
+                        <div class="p-3.5 space-y-1">
+                            <h3 onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="text-sm font-semibold text-slate-100 group-hover:text-cyan-300 line-clamp-2 cursor-pointer leading-snug">${video.title}</h3>
+                            <p class="text-xs text-slate-400 font-medium truncate">${video.channel}</p>
+                            <p class="text-[11px] text-slate-500">${video.views || ''}</p>
                         </div>
                     </div>
                     <div class="px-3.5 pb-3.5 pt-1 flex items-center gap-2">
-                        <button 
-                            onclick='addToQueue(${JSON.stringify(video).replace(/'/g, "&#39;")})'
-                            class="flex-1 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/70 transition-all flex items-center justify-center gap-1"
-                        >
-                            <span>+ Queue</span>
-                        </button>
-                        <button 
-                            onclick='toggleSaveVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'
-                            class="py-1.5 px-2.5 rounded-lg text-xs font-medium border transition-all ${isSaved ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-slate-800/90 hover:bg-slate-700 border-slate-700/70 text-slate-300'}"
-                            title="${isSaved ? 'Remove from Saved' : 'Save to Watchlist'}"
-                        >
-                            ${isSaved ? 'Saved' : 'Save'}
-                        </button>
+                        <button onclick='addToQueue(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="flex-1 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">+ Queue</button>
+                        <button onclick='toggleSave(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="py-1.5 px-3 rounded-lg text-xs font-medium border ${isSaved ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'}">${isSaved ? 'Saved' : 'Save'}</button>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        function renderEmptySearchState(query) {
-            const grid = document.getElementById('video-grid');
-            grid.innerHTML = `
-                <div class="col-span-full glass-panel rounded-2xl p-8 text-center space-y-3">
-                    <div class="w-12 h-12 rounded-2xl bg-slate-800 text-cyan-400 mx-auto flex items-center justify-center">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-base font-semibold text-white">No live results for "${escapeHTML(query)}"</h3>
-                    <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                        Public search relays may be rate-limited right now. You can paste any YouTube video URL directly into the search bar to play it immediately, or add a free YouTube Data API key in Settings.
-                    </p>
-                    <div class="pt-2 flex justify-center gap-2">
-                        <button onclick="resetHome()" class="px-4 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200">Back to Featured</button>
-                        <button onclick="toggleModal('settings-modal', true)" class="px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950">Open Settings</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        /**
-         * Category Filtering & Reset
-         */
-        function selectCategory(category) {
-            state.activeCategory = category;
-            switchTab('explore');
-
+        function selectCategory(cat) {
+            state.activeCategory = cat;
             document.querySelectorAll('.cat-pill').forEach(btn => {
-                const isMatch = btn.dataset.cat === category;
-                btn.className = isMatch
-                    ? 'cat-pill active shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-cyan-500 text-slate-950 shadow-sm transition-all'
-                    : 'cat-pill shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60 transition-all';
+                const match = btn.dataset.cat === cat;
+                btn.className = match ? 'cat-pill active shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-cyan-500 text-slate-950 shadow-sm transition-all' : 'cat-pill shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700/80 transition-all';
             });
-
-            if (category === 'All') {
+            if (cat === 'All') {
                 state.currentVideos = [...STARTER_VIDEOS];
-                document.getElementById('feed-heading').textContent = 'Featured & Curated Streams';
-                document.getElementById('source-indicator').textContent = 'Offline Starter Library';
-                renderVideoGrid(state.currentVideos);
+                document.getElementById('feed-heading').textContent = 'Recommended Streams';
             } else {
-                const filtered = STARTER_VIDEOS.filter(v => v.category === category);
-                state.currentVideos = filtered;
-                document.getElementById('feed-heading').textContent = category;
-                document.getElementById('source-indicator').textContent = 'Curated Category';
-                renderVideoGrid(filtered);
+                state.currentVideos = STARTER_VIDEOS.filter(v => v.category === cat);
+                document.getElementById('feed-heading').textContent = cat;
             }
+            renderVideoGrid(state.currentVideos);
         }
 
-        function resetHome() {
+        function navigateHome() {
             clearSearchInput();
             selectCategory('All');
+            switchTab('explore');
+            closeWatchView();
         }
 
         function clearSearchInput() {
-            const input = document.getElementById('search-input');
-            input.value = '';
+            document.getElementById('search-input').value = '';
             document.getElementById('clear-search-btn').classList.add('hidden');
         }
 
-        /**
-         * Queue & Watchlist Management (Persisted in localStorage)
-         */
         function addToQueue(video) {
             if (!state.queue.some(v => v.id === video.id)) {
                 state.queue.push(video);
                 localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
-                renderQueue();
-                showToast(`Added "${video.title.slice(0, 32)}..." to Queue`, 'success');
+                renderSidebarQueue();
+                renderWatchQueue();
+                showToast(`Added to Queue`, 'success');
             } else {
-                showToast('Video is already in your queue.', 'info');
+                showToast('Already in queue', 'info');
             }
         }
 
         function removeFromQueue(id) {
             state.queue = state.queue.filter(v => v.id !== id);
             localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
-            renderQueue();
+            renderSidebarQueue();
+            renderWatchQueue();
         }
 
         function playNextInQueue() {
             if (state.queue.length === 0) {
-                showToast('Your Up Next queue is empty.', 'info');
+                showToast('Queue is empty', 'info');
                 return;
             }
-            const nextVideo = state.queue.shift();
+            const next = state.queue.shift();
             localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
-            renderQueue();
-            playVideo(nextVideo);
+            renderSidebarQueue();
+            playVideo(next);
         }
 
-        function renderQueue() {
-            const container = document.getElementById('queue-list-container');
-            document.getElementById('queue-count').textContent = state.queue.length;
-
+        function renderSidebarQueue() {
+            const container = document.getElementById('sidebar-queue-list');
+            document.getElementById('sidebar-queue-count').textContent = state.queue.length;
             if (state.queue.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8 px-4 text-xs text-slate-500 space-y-1">
-                        <p class="font-medium text-slate-400">Queue is empty</p>
-                        <p>Click "+ Queue" on any video card to line up videos.</p>
-                    </div>
-                `;
+                container.innerHTML = `<div class="px-3 py-2 text-[11px] text-slate-500">Queue is empty</div>`;
                 return;
             }
-
-            container.innerHTML = state.queue.map(video => `
-                <div class="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 group transition-all">
-                    <img 
-                        src="https://i.ytimg.com/vi/${video.id}/default.jpg" 
-                        alt="" 
-                        onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'
-                        class="w-20 h-12 object-cover rounded-lg cursor-pointer shrink-0 bg-slate-950"
-                    >
-                    <div class="flex-1 min-w-0 cursor-pointer" onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'>
-                        <p class="text-xs font-medium text-slate-200 group-hover:text-cyan-300 truncate">${escapeHTML(video.title)}</p>
-                        <p class="text-[11px] text-slate-400 truncate">${escapeHTML(video.channel)}</p>
+            container.innerHTML = state.queue.map(v => `
+                <div class="flex items-center gap-2 p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 group cursor-pointer" onclick='playVideo(${JSON.stringify(v).replace(/'/g, "&#39;")})'>
+                    <img src="https://i.ytimg.com/vi/${v.id}/default.jpg" class="w-14 h-9 object-cover rounded bg-slate-950">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-medium text-slate-200 truncate group-hover:text-cyan-300">${v.title}</p>
                     </div>
-                    <button onclick="removeFromQueue('${video.id}')" title="Remove" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                    </button>
                 </div>
             `).join('');
         }
 
-        function toggleSaveVideo(video) {
+        function renderWatchQueue() {
+            const container = document.getElementById('watch-queue-container');
+            if (state.queue.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">No videos in queue</div>`;
+                return;
+            }
+            container.innerHTML = state.queue.map(v => `
+                <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 group">
+                    <img src="https://i.ytimg.com/vi/${v.id}/default.jpg" onclick='playVideo(${JSON.stringify(v).replace(/'/g, "&#39;")})' class="w-24 h-14 object-cover rounded-lg cursor-pointer bg-slate-950">
+                    <div class="flex-1 min-w-0 cursor-pointer" onclick='playVideo(${JSON.stringify(v).replace(/'/g, "&#39;")})'>
+                        <p class="text-xs font-medium text-slate-200 group-hover:text-cyan-300 truncate">${v.title}</p>
+                        <p class="text-[11px] text-slate-400 truncate">${v.channel}</p>
+                    </div>
+                    <button onclick="removeFromQueue('${v.id}')" class="p-1 text-slate-500 hover:text-rose-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+            `).join('');
+        }
+
+        function toggleSave(video) {
             const exists = state.savedVideos.some(v => v.id === video.id);
             if (exists) {
                 state.savedVideos = state.savedVideos.filter(v => v.id !== video.id);
-                showToast('Removed from Saved Watchlist', 'info');
+                showToast('Removed from Watch Later', 'info');
             } else {
                 state.savedVideos.unshift(video);
-                showToast('Saved to Watchlist', 'success');
+                showToast('Saved to Watch Later', 'success');
             }
             localStorage.setItem('streamslate_saved', JSON.stringify(state.savedVideos));
-            updateSavedBadge();
-            updatePlayerBookmarkButton();
+            updateBadges();
             renderVideoGrid(state.currentVideos);
             renderSavedGrid();
+            updateWatchSaveButton();
         }
 
-        function toggleBookmarkCurrent() {
-            if (state.activeVideo) {
-                toggleSaveVideo(state.activeVideo);
-            }
+        function toggleBookmarkActive() {
+            if (state.activeVideo) toggleSave(state.activeVideo);
         }
 
-        function updatePlayerBookmarkButton() {
+        function updateWatchSaveButton() {
             if (!state.activeVideo) return;
             const isSaved = state.savedVideos.some(v => v.id === state.activeVideo.id);
-            const btn = document.getElementById('player-bookmark-btn');
-            const label = document.getElementById('player-bookmark-label');
+            const btn = document.getElementById('watch-save-btn');
+            const lbl = document.getElementById('watch-save-label');
             if (isSaved) {
-                btn.classList.add('bg-cyan-500/20', 'border-cyan-500/50', 'text-cyan-300');
-                label.textContent = 'Saved';
+                btn.className = 'px-3.5 py-2 rounded-xl text-xs font-medium bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 flex items-center gap-1.5';
+                lbl.textContent = 'Saved';
             } else {
-                btn.classList.remove('bg-cyan-500/20', 'border-cyan-500/50', 'text-cyan-300');
-                label.textContent = 'Save';
+                btn.className = 'px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5';
+                lbl.textContent = 'Save';
             }
         }
 
-        function updateSavedBadge() {
-            document.getElementById('saved-count-badge').textContent = state.savedVideos.length;
+        function updateBadges() {
+            document.getElementById('saved-count-sidebar').textContent = state.savedVideos.length;
         }
 
         function renderSavedGrid() {
             const grid = document.getElementById('saved-grid');
             if (state.savedVideos.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full glass-panel rounded-2xl p-10 text-center space-y-2">
-                        <p class="text-sm font-semibold text-slate-300">No saved videos yet</p>
-                        <p class="text-xs text-slate-500">Click "Save" on any video card or in the player toolbar to bookmark it here.</p>
-                    </div>
-                `;
+                grid.innerHTML = `<div class="col-span-full glass-panel rounded-2xl p-10 text-center text-xs text-slate-500">No saved videos in Watch Later</div>`;
                 return;
             }
-
-            grid.innerHTML = '';
-            state.savedVideos.forEach(video => {
-                const card = document.createElement('article');
-                card.className = 'group glass-panel rounded-2xl overflow-hidden flex flex-col justify-between border border-slate-800 hover:border-cyan-500/40 transition-all';
-                card.innerHTML = `
+            grid.innerHTML = state.savedVideos.map(v => `
+                <article class="glass-panel rounded-2xl overflow-hidden flex flex-col justify-between">
                     <div>
-                        <div class="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer" onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})'>
-                            <img src="https://i.ytimg.com/vi/${video.id}/hqdefault.jpg" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
-                            <span class="absolute bottom-2 right-2 bg-slate-950/90 text-slate-100 font-mono text-[11px] px-2 py-0.5 rounded-md">${escapeHTML(video.duration || 'HD')}</span>
+                        <div class="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer" onclick='playVideo(${JSON.stringify(v).replace(/'/g, "&#39;")})'>
+                            <img src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" class="w-full h-full object-cover">
                         </div>
                         <div class="p-3.5 space-y-1">
-                            <h3 onclick='playVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="text-sm font-semibold text-slate-100 hover:text-cyan-300 line-clamp-2 cursor-pointer">${escapeHTML(video.title)}</h3>
-                            <p class="text-xs text-slate-400 truncate">${escapeHTML(video.channel)}</p>
+                            <h3 onclick='playVideo(${JSON.stringify(v).replace(/'/g, "&#39;")})' class="text-sm font-semibold text-slate-100 hover:text-cyan-300 line-clamp-2 cursor-pointer">${v.title}</h3>
+                            <p class="text-xs text-slate-400">${v.channel}</p>
                         </div>
                     </div>
-                    <div class="px-3.5 pb-3.5 flex items-center gap-2">
-                        <button onclick='addToQueue(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="flex-1 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200">+ Queue</button>
-                        <button onclick='toggleSaveVideo(${JSON.stringify(video).replace(/'/g, "&#39;")})' class="py-1.5 px-3 rounded-lg text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300">Remove</button>
+                    <div class="px-3.5 pb-3.5">
+                        <button onclick='toggleSave(${JSON.stringify(v).replace(/'/g, "&#39;")})' class="w-full py-1.5 rounded-lg text-xs font-medium bg-rose-500/15 text-rose-300">Remove</button>
                     </div>
-                `;
-                grid.appendChild(card);
-            });
+                </article>
+            `).join('');
         }
 
-        /**
-         * Export / Import JSON Watchlist
-         */
-        function exportLibraryJSON() {
-            const payload = JSON.stringify({ savedVideos: state.savedVideos, queue: state.queue }, null, 2);
-            const blob = new Blob([payload], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'streamslate-watchlist.json';
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Exported watchlist JSON', 'success');
-        }
-
-        function importLibraryJSON(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (Array.isArray(parsed.savedVideos)) {
-                        state.savedVideos = parsed.savedVideos;
-                        localStorage.setItem('streamslate_saved', JSON.stringify(state.savedVideos));
-                    }
-                    if (Array.isArray(parsed.queue)) {
-                        state.queue = parsed.queue;
-                        localStorage.setItem('streamslate_queue', JSON.stringify(state.queue));
-                    }
-                    updateSavedBadge();
-                    renderSavedGrid();
-                    renderQueue();
-                    showToast('Watchlist imported successfully', 'success');
-                } catch (err) {
-                    showToast('Invalid JSON file format', 'error');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function clearSavedLibrary() {
-            state.savedVideos = [];
-            localStorage.setItem('streamslate_saved', '[]');
-            updateSavedBadge();
-            renderSavedGrid();
-            renderVideoGrid(state.currentVideos);
-            showToast('Cleared saved watchlist', 'info');
-        }
-
-        /**
-         * Tab Navigation & Settings Modal
-         */
         function switchTab(tab) {
-            const exploreView = document.getElementById('explore-view');
-            const libraryView = document.getElementById('library-view');
-            const exploreBtn = document.getElementById('nav-explore-btn');
-            const libraryBtn = document.getElementById('nav-library-btn');
+            const explore = document.getElementById('explore-view');
+            const library = document.getElementById('library-view');
+            const watch = document.getElementById('watch-view');
+            const homeBtn = document.getElementById('sidebar-home');
+            const libBtn = document.getElementById('sidebar-library');
 
+            watch.classList.add('hidden');
             if (tab === 'explore') {
-                exploreView.classList.remove('hidden');
-                libraryView.classList.add('hidden');
-                exploreBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
-                libraryBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 border border-transparent flex items-center gap-1.5';
+                explore.classList.remove('hidden');
+                library.classList.add('hidden');
+                homeBtn.classList.add('active');
+                libBtn.classList.remove('active');
             } else {
-                exploreView.classList.add('hidden');
-                libraryView.classList.remove('hidden');
-                libraryBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5';
-                exploreBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all text-slate-300 hover:bg-slate-800/80 border border-transparent';
+                explore.classList.add('hidden');
+                library.classList.remove('hidden');
+                libBtn.classList.add('active');
+                homeBtn.classList.remove('active');
                 renderSavedGrid();
             }
         }
 
+        function toggleSidebar() {
+            const sidebar = document.getElementById('desktop-sidebar');
+            sidebar.classList.toggle('hidden');
+        }
+
         function toggleModal(id, show) {
-            const modal = document.getElementById(id);
-            if (show) {
-                updateSettingsUI();
-                modal.classList.remove('hidden');
-            } else {
-                modal.classList.add('hidden');
-            }
+            document.getElementById(id).classList.toggle('hidden', !show);
         }
 
         function setSearchMode(mode) {
@@ -1140,98 +771,65 @@
         }
 
         function updateSettingsUI() {
-            const publicBtn = document.getElementById('mode-public-btn');
+            document.getElementById('yt-api-key-input').value = state.ytApiKey;
+            const pubBtn = document.getElementById('mode-public-btn');
             const ytBtn = document.getElementById('mode-youtube-btn');
-            const keyInput = document.getElementById('yt-api-key-input');
-            const badge = document.getElementById('api-badge');
-
-            keyInput.value = state.ytApiKey;
-
             if (state.searchMode === 'youtube') {
-                ytBtn.className = 'p-3 rounded-xl border text-left transition-all bg-teal-500/15 border-teal-500 text-white';
-                publicBtn.className = 'p-3 rounded-xl border text-left transition-all bg-slate-900 border-slate-700 text-slate-300';
-                badge.textContent = 'YouTube API v3';
+                ytBtn.className = 'p-3 rounded-xl border text-left bg-teal-500/15 border-teal-500 text-white';
+                pubBtn.className = 'p-3 rounded-xl border text-left bg-slate-900 border-slate-700 text-slate-300';
             } else {
-                publicBtn.className = 'p-3 rounded-xl border text-left transition-all bg-cyan-500/15 border-cyan-500 text-white';
-                ytBtn.className = 'p-3 rounded-xl border text-left transition-all bg-slate-900 border-slate-700 text-slate-300';
-                badge.textContent = 'Public Relay';
+                pubBtn.className = 'p-3 rounded-xl border text-left bg-cyan-500/15 border-cyan-500 text-white';
+                ytBtn.className = 'p-3 rounded-xl border text-left bg-slate-900 border-slate-700 text-slate-300';
             }
         }
 
         function saveSettings() {
-            const keyVal = document.getElementById('yt-api-key-input').value.trim();
-            state.ytApiKey = keyVal;
-            if (state.searchMode === 'youtube' && !keyVal) {
-                showToast('Please enter a YouTube API v3 key or switch to Public Relay.', 'error');
-                return;
-            }
+            state.ytApiKey = document.getElementById('yt-api-key-input').value.trim();
             localStorage.setItem('streamslate_search_mode', state.searchMode);
             localStorage.setItem('streamslate_yt_api_key', state.ytApiKey);
-            updateSettingsUI();
             toggleModal('settings-modal', false);
-            showToast('Preferences saved', 'success');
+            showToast('Settings saved', 'success');
         }
 
-        /**
-         * Clipboard & Toast Helpers (No alert() used)
-         */
         function copyShareLink() {
             if (!state.activeVideo) return;
-            const shareUrl = `https://youtu.be/${state.activeVideo.id}`;
-            const tempInput = document.createElement('input');
-            tempInput.value = shareUrl;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            try {
-                document.execCommand('copy');
-                showToast(`Copied: ${shareUrl}`, 'success');
-            } catch (err) {
-                showToast('Unable to copy link', 'error');
-            }
-            document.body.removeChild(tempInput);
+            const url = `https://youtu.be/${state.activeVideo.id}`;
+            const temp = document.createElement('input');
+            temp.value = url;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast(`Copied: ${url}`, 'success');
         }
 
-        function showToast(message, type = 'info') {
+        function exportJSON() {
+            const blob = new Blob([JSON.stringify({ saved: state.savedVideos, queue: state.queue }, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'streamslate-export.json';
+            a.click();
+            showToast('Exported successfully', 'success');
+        }
+
+        function clearLibrary() {
+            state.savedVideos = [];
+            localStorage.setItem('streamslate_saved', '[]');
+            updateBadges();
+            renderSavedGrid();
+            renderVideoGrid(state.currentVideos);
+            showToast('Library cleared', 'info');
+        }
+
+        function showToast(msg, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            const borderClass = type === 'success' ? 'border-teal-500/50 text-teal-200' : type === 'error' ? 'border-rose-500/50 text-rose-200' : 'border-cyan-500/50 text-cyan-200';
-            toast.className = `pointer-events-auto glass-panel px-4 py-3 rounded-xl shadow-xl border ${borderClass} text-xs font-medium flex items-center justify-between gap-3 transition-all`;
-            toast.innerHTML = `<span>${escapeHTML(message)}</span>`;
+            const border = type === 'success' ? 'border-teal-500/50 text-teal-200' : type === 'error' ? 'border-rose-500/50 text-rose-200' : 'border-cyan-500/50 text-cyan-200';
+            toast.className = `glass-panel px-4 py-3 rounded-xl shadow-xl border ${border} text-xs font-medium`;
+            toast.textContent = msg;
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3200);
-        }
-
-        function setLoading(isLoading, text = 'Loading...') {
-            const spinner = document.getElementById('loading-spinner');
-            document.getElementById('loading-text').textContent = text;
-            spinner.classList.toggle('hidden', !isLoading);
-        }
-
-        function formatViews(num) {
-            if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M views';
-            if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K views';
-            return num + ' views';
-        }
-
-        function formatDuration(sec) {
-            const h = Math.floor(sec / 3600);
-            const m = Math.floor((sec % 3600) / 60);
-            const s = sec % 60;
-            if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            return `${m}:${String(s).padStart(2, '0')}`;
-        }
-
-        function escapeHTML(str) {
-            return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-        }
-
-        function decodeHTMLEntities(text) {
-            const txt = document.createElement('textarea');
-            txt.innerHTML = text;
-            return txt.value;
+            setTimeout(() => { toast.remove(); }, 3000);
         }
     </script>
 </body>
