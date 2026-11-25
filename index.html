@@ -9,8 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="YT" />
   <title>YT</title>
 
-  <!-- Web App Manifest -->
-  <link rel="manifest" href="manifest.json" />
+  <link id="manifest-link" rel="manifest" />
   <link id="favicon" rel="icon" type="image/png" />
   <link id="apple-icon" rel="apple-touch-icon" />
 
@@ -96,18 +95,18 @@
   <div class="card">
     <div class="logo"><div class="triangle"></div></div>
     <h1>YT Web App</h1>
-    <div id="statusBadge" class="badge">App Ready to Install</div>
-    <p>Install this page as a standalone app first. Once installed, replace <code>index.html</code> with the redirect code.</p>
+    <div class="badge">Single-File App Ready</div>
+    <p>Install this page as an app first. Once installed, replace this file with the redirect version.</p>
     <div class="steps">
       <strong>1.</strong> Open this URL in a signed-out browser/profile.<br />
-      <strong>2.</strong> Tap the browser menu (<strong>⋮</strong>) &rarr; <strong>Install app</strong> / <strong>Add to Home screen</strong>.<br />
-      <strong>3.</strong> Confirm <strong>YT</strong> is on your home screen/desktop.
+      <strong>2.</strong> Open browser menu (<strong>⋮</strong>) &rarr; <strong>Install app</strong> / <strong>Add to Home screen</strong>.<br />
+      <strong>3.</strong> Confirm the <strong>YT</strong> icon appears on your device.
     </div>
     <button id="installBtn">Install YT App</button>
   </div>
 
   <script>
-    // Generate crisp PNG favicon dynamically
+    // 1. Generate PNG icon in memory
     function createPngIcon(size) {
       const canvas = document.createElement('canvas');
       canvas.width = size;
@@ -140,15 +139,38 @@
     }
 
     const icon192 = createPngIcon(192);
+    const icon512 = createPngIcon(512);
     document.getElementById('favicon').href = icon192;
     document.getElementById('apple-icon').href = icon192;
 
-    // Register Service Worker
+    // 2. Embed Web App Manifest inline via Data URL
+    const manifest = {
+      name: 'YT',
+      short_name: 'YT',
+      start_url: location.href,
+      display: 'standalone',
+      background_color: '#0f0f0f',
+      theme_color: '#0f0f0f',
+      icons: [
+        { src: icon192, sizes: '192x192', type: 'image/png' },
+        { src: icon512, sizes: '512x512', type: 'image/png' }
+      ]
+    };
+    const manifestDataUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+    document.getElementById('manifest-link').href = manifestDataUrl;
+
+    // 3. Register inline Service Worker via Blob
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      const swCode = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+        self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+      `;
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
     }
 
-    // Handle native install prompt if triggered
+    // 4. Native Install Prompt
     let deferredPrompt;
     const installBtn = document.getElementById('installBtn');
     window.addEventListener('beforeinstallprompt', (e) => {
