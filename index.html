@@ -1,99 +1,169 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YT</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="YT" />
+  <title>YT</title>
 
-    <!-- PWA & Standalone Web App Metadata -->
-    <meta name="application-name" content="YT">
-    <meta name="theme-color" content="#0f0f0f">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="YT">
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <link id="favicon" rel="icon" type="image/png" />
+  <link id="apple-icon" rel="apple-touch-icon" />
 
-    <!-- Authentic YouTube-style Rounded Red Play-Button Favicon & Touch Icon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='12' width='56' height='40' rx='12' fill='%23ff0000'/%3E%3Cpolygon points='26,22 26,42 44,32' fill='%23ffffff'/%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f0f0f'/%3E%3Crect x='8' y='15' width='48' height='34' rx='10' fill='%23ff0000'/%3E%3Cpolygon points='27,23.5 27,40.5 42,32' fill='%23ffffff'/%3E%3C/svg%3E">
-
-    <!-- Embedded Web App Manifest for Standalone PWA Installation -->
-    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22YT%22%2C%22short_name%22%3A%22YT%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f0f0f%22%2C%22theme_color%22%3A%22%230f0f0f%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%25200%252064%252064%27%253E%253Crect%2520x%3D%274%27%2520y%3D%2712%27%2520width%3D%2756%27%2520height%3D%2740%27%2520rx%3D%2712%27%2520fill%3D%27%2523ff0000%27%2F%253E%253Cpolygon%2520points%3D%2726%2C22%252026%2C42%252044%2C32%27%2520fill%3D%27%2523ffffff%27%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
-
-    <!-- Load Tailwind CSS & Inter Font -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #0f0f0f;
+      color: #f1f1f1;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .logo {
+      width: 72px;
+      height: 50px;
+      background: #ff0000;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+    .triangle {
+      width: 0;
+      height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 18px solid #ffffff;
+      margin-left: 4px;
+    }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    p { font-size: 14px; color: #aaaaaa; line-height: 1.5; margin-bottom: 20px; }
+    .badge {
+      display: inline-block;
+      background: #143624;
+      color: #4ade80;
+      border: 1px solid #1e5236;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .steps {
+      text-align: left;
+      background: #121212;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #cccccc;
+      line-height: 1.6;
+    }
+    .steps strong { color: #ffffff; }
+    #installBtn {
+      display: none;
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px;
+      background: #ff0000;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
 </head>
-<body class="bg-[#0f0f0f] text-zinc-100 font-sans min-h-screen w-screen overflow-x-hidden flex flex-col items-center justify-center p-6 select-none">
+<body>
+  <div class="card">
+    <div class="logo"><div class="triangle"></div></div>
+    <h1>YT Web App</h1>
+    <div id="statusBadge" class="badge">App Ready to Install</div>
+    <p>Install this page as a standalone app first. Once installed, replace <code>index.html</code> with the redirect code.</p>
+    <div class="steps">
+      <strong>1.</strong> Open this URL in a signed-out browser/profile.<br />
+      <strong>2.</strong> Tap the browser menu (<strong>⋮</strong>) &rarr; <strong>Install app</strong> / <strong>Add to Home screen</strong>.<br />
+      <strong>3.</strong> Confirm <strong>YT</strong> is on your home screen/desktop.
+    </div>
+    <button id="installBtn">Install YT App</button>
+  </div>
 
-    <!-- PWA Installation & Setup Card -->
-    <main class="flex flex-col items-center text-center max-w-md w-full bg-zinc-900/80 border border-zinc-800/90 rounded-3xl p-8 shadow-2xl space-y-6">
-        <!-- YouTube-style App Icon -->
-        <div class="w-20 h-14 rounded-2xl bg-[#ff0000] flex items-center justify-center shadow-lg shadow-red-600/30">
-            <svg class="w-9 h-9 text-white fill-current ml-0.5" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M8 5v14l11-7z"/>
-            </svg>
-        </div>
+  <script>
+    // Generate crisp PNG favicon dynamically
+    function createPngIcon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
 
-        <!-- Title & Subtitle -->
-        <div class="space-y-1.5">
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium mb-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                Ready to Install
-            </div>
-            <h1 class="text-2xl font-semibold tracking-tight text-white">YT</h1>
-            <p class="text-xs text-zinc-400 leading-relaxed">
-                Auto-redirect is temporarily paused so you can install this page as a standalone app first.
-            </p>
-        </div>
+      ctx.fillStyle = '#0f0f0f';
+      ctx.fillRect(0, 0, size, size);
 
-        <!-- Step-by-Step Browser Installation Guide -->
-        <div class="w-full text-left bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">How to Install Now</h2>
-            <ul class="space-y-2.5 text-xs text-zinc-300">
-                <li class="flex items-start gap-2.5">
-                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-zinc-800 text-zinc-200 font-semibold flex items-center justify-center text-[11px]">1</span>
-                    <span><strong class="text-white">Chrome / Edge (Desktop):</strong> Click the <span class="text-zinc-100 underline decoration-zinc-600">Install icon</span> in the right side of the address bar, or open <strong class="text-white">Menu (⋮) → Save and share → Install page as app</strong>.</span>
-                </li>
-                <li class="flex items-start gap-2.5">
-                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-zinc-800 text-zinc-200 font-semibold flex items-center justify-center text-[11px]">2</span>
-                    <span><strong class="text-white">Safari (iOS / macOS):</strong> Tap <strong class="text-white">Share</strong> and choose <strong class="text-white">Add to Home Screen</strong> (or <strong class="text-white">Add to Dock</strong> on Mac).</span>
-                </li>
-                <li class="flex items-start gap-2.5">
-                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-zinc-800 text-zinc-200 font-semibold flex items-center justify-center text-[11px]">3</span>
-                    <span>Once installed, let me know and we will restore the instant auto-redirect code.</span>
-                </li>
-            </ul>
-        </div>
+      const w = size * 0.76;
+      const h = size * 0.54;
+      const x = (size - w) / 2;
+      const y = (size - h) / 2;
+      const r = size * 0.14;
 
-        <!-- Manual Test Launch Button -->
-        <div class="w-full pt-1 space-y-2.5">
-            <a href="https://www.youtube.com/?app=desktop"
-               target="_blank"
-               rel="noopener noreferrer"
-               class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#ff0000] hover:bg-red-600 active:scale-[0.99] text-sm font-medium text-white shadow-lg shadow-red-600/20 transition-all">
-                <span>Test Launch YouTube</span>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                </svg>
-            </a>
-            <p class="text-[11px] text-zinc-500">Opens in a new tab so you keep this installer page open.</p>
-        </div>
-    </main>
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.fill();
 
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(size * 0.43, size * 0.36);
+      ctx.lineTo(size * 0.43, size * 0.64);
+      ctx.lineTo(size * 0.64, size * 0.50);
+      ctx.closePath();
+      ctx.fill();
+
+      return canvas.toDataURL('image/png');
+    }
+
+    const icon192 = createPngIcon(192);
+    document.getElementById('favicon').href = icon192;
+    document.getElementById('apple-icon').href = icon192;
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // Handle native install prompt if triggered
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBtn.style.display = 'none';
+    });
+  </script>
 </body>
 </html>
