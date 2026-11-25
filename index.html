@@ -20,13 +20,7 @@
     <!-- Embedded Web App Manifest for Standalone PWA Installation -->
     <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22YT%22%2C%22short_name%22%3A%22YT%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f0f0f%22%2C%22theme_color%22%3A%22%230f0f0f%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%25200%252064%252064%27%253E%253Crect%2520x%3D%274%27%2520y%3D%2712%27%2520width%3D%2756%27%2520height%3D%2740%27%2520rx%3D%2712%27%2520fill%3D%27%2523ff0000%27%2F%253E%253Cpolygon%2520points%3D%2726%2C22%252026%2C42%252044%2C32%27%2520fill%3D%27%2523ffffff%27%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
 
-    <!-- Immediate Automatic Redirection -->
-    <script>
-        window.location.replace("https://www.youtube.com/?app=desktop");
-    </script>
-    <meta http-equiv="refresh" content="0; url=https://www.youtube.com/?app=desktop">
-
-    <!-- Load Tailwind CSS & Inter Font for Minimalist Fallback Screen -->
+    <!-- Load Tailwind CSS & Inter Font -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,36 +38,61 @@
         }
     </script>
 </head>
-<body class="bg-[#0f0f0f] text-zinc-100 font-sans h-screen w-screen overflow-hidden flex flex-col items-center justify-center p-6 select-none">
+<body class="bg-[#0f0f0f] text-zinc-100 font-sans min-h-screen w-screen overflow-x-hidden flex flex-col items-center justify-center p-6 select-none">
 
-    <!-- Minimalist Loading & Fallback Container -->
-    <main class="flex flex-col items-center text-center max-w-xs w-full space-y-6">
-        <!-- YouTube-style App Icon & Subtle Spinner -->
-        <div class="relative flex items-center justify-center p-2">
-            <div class="w-20 h-14 rounded-2xl bg-[#ff0000] flex items-center justify-center shadow-lg shadow-red-600/25">
-                <svg class="w-8 h-8 text-white fill-current ml-0.5" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8 5v14l11-7z"/>
-                </svg>
-            </div>
-            <!-- Subtle Circular Loading Ring -->
-            <div class="absolute -inset-1.5 rounded-3xl border-2 border-zinc-800 border-t-red-500 animate-spin" aria-hidden="true"></div>
-        </div>
-
-        <!-- Status Text -->
-        <div class="space-y-1">
-            <h1 class="text-lg font-semibold tracking-tight text-white">YT</h1>
-            <p class="text-xs text-zinc-400">Opening YouTube Desktop...</p>
-        </div>
-
-        <!-- Manual Fallback Link (in case redirect is delayed or blocked) -->
-        <a href="https://www.youtube.com/?app=desktop"
-           rel="noopener noreferrer"
-           class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors">
-            <span>Continue to YouTube</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+    <!-- PWA Installation & Setup Card -->
+    <main class="flex flex-col items-center text-center max-w-md w-full bg-zinc-900/80 border border-zinc-800/90 rounded-3xl p-8 shadow-2xl space-y-6">
+        <!-- YouTube-style App Icon -->
+        <div class="w-20 h-14 rounded-2xl bg-[#ff0000] flex items-center justify-center shadow-lg shadow-red-600/30">
+            <svg class="w-9 h-9 text-white fill-current ml-0.5" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 5v14l11-7z"/>
             </svg>
-        </a>
+        </div>
+
+        <!-- Title & Subtitle -->
+        <div class="space-y-1.5">
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium mb-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Ready to Install
+            </div>
+            <h1 class="text-2xl font-semibold tracking-tight text-white">YT</h1>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+                Auto-redirect is temporarily paused so you can install this page as a standalone app first.
+            </p>
+        </div>
+
+        <!-- Step-by-Step Browser Installation Guide -->
+        <div class="w-full text-left bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">How to Install Now</h2>
+            <ul class="space-y-2.5 text-xs text-zinc-300">
+                <li class="flex items-start gap-2.5">
+                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-zinc-800 text-zinc-200 font-semibold flex items-center justify-center text-[11px]">1</span>
+                    <span><strong class="text-white">Chrome / Edge (Desktop):</strong> Click the <span class="text-zinc-100 underline decoration-zinc-600">Install icon</span> in the right side of the address bar, or open <strong class="text-white">Menu (⋮) → Save and share → Install page as app</strong>.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-zinc-800 text-zinc-200 font-semibold flex items-center justify-center text-[11px]">2</span>
+                    <span><strong class="text-white">Safari (iOS / macOS):</strong> Tap <strong class="text-white">Share</strong> and choose <strong class="text-white">Add to Home Screen</strong> (or <strong class="text-white">Add to Dock</strong> on Mac).</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-zinc-800 text-zinc-200 font-semibold flex items-center justify-center text-[11px]">3</span>
+                    <span>Once installed, let me know and we will restore the instant auto-redirect code.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Manual Test Launch Button -->
+        <div class="w-full pt-1 space-y-2.5">
+            <a href="https://www.youtube.com/?app=desktop"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#ff0000] hover:bg-red-600 active:scale-[0.99] text-sm font-medium text-white shadow-lg shadow-red-600/20 transition-all">
+                <span>Test Launch YouTube</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+            </a>
+            <p class="text-[11px] text-zinc-500">Opens in a new tab so you keep this installer page open.</p>
+        </div>
     </main>
 
 </body>
