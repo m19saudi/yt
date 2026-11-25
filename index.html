@@ -4,188 +4,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0f0f0f" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="YT" />
+  <meta http-equiv="refresh" content="0; url=https://www.youtube.com/?app=desktop" />
   <title>YT</title>
-
-  <link id="manifest-link" rel="manifest" />
-  <link id="favicon" rel="icon" type="image/png" />
-  <link id="apple-icon" rel="apple-touch-icon" />
-
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='44' y='10' rx='12' fill='%23ff0000'/%3E%3Cpolygon points='26,22 26,42 44,32' fill='%23ffffff'/%3E%3C/svg%3E" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background-color: #0f0f0f;
-      color: #f1f1f1;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #aaaaaa;
+      font-family: system-ui, -apple-system, sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      padding: 24px;
+      height: 100vh;
+      margin: 0;
     }
-    .card {
-      background: #181818;
-      border: 1px solid #2a2a2a;
-      border-radius: 16px;
-      padding: 32px 24px;
-      max-width: 380px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-    }
-    .logo {
-      width: 72px;
-      height: 50px;
-      background: #ff0000;
-      border-radius: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 18px;
-    }
-    .triangle {
-      width: 0;
-      height: 0;
-      border-top: 10px solid transparent;
-      border-bottom: 10px solid transparent;
-      border-left: 18px solid #ffffff;
-      margin-left: 4px;
-    }
-    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    p { font-size: 14px; color: #aaaaaa; line-height: 1.5; margin-bottom: 20px; }
-    .badge {
-      display: inline-block;
-      background: #143624;
-      color: #4ade80;
-      border: 1px solid #1e5236;
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-bottom: 20px;
-    }
-    .steps {
-      text-align: left;
-      background: #121212;
-      border-radius: 10px;
-      padding: 14px 16px;
-      font-size: 13px;
-      color: #cccccc;
-      line-height: 1.6;
-    }
-    .steps strong { color: #ffffff; }
-    #installBtn {
-      display: none;
-      width: 100%;
-      margin-top: 18px;
-      padding: 12px;
-      background: #ff0000;
-      color: #ffffff;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+    a { color: #ff0000; text-decoration: none; }
   </style>
+  <script>
+    window.location.replace('https://www.youtube.com/?app=desktop');
+  </script>
 </head>
 <body>
-  <div class="card">
-    <div class="logo"><div class="triangle"></div></div>
-    <h1>YT Web App</h1>
-    <div class="badge">Single-File App Ready</div>
-    <p>Install this page as an app first. Once installed, replace this file with the redirect version.</p>
-    <div class="steps">
-      <strong>1.</strong> Open this URL in a signed-out browser/profile.<br />
-      <strong>2.</strong> Open browser menu (<strong>⋮</strong>) &rarr; <strong>Install app</strong> / <strong>Add to Home screen</strong>.<br />
-      <strong>3.</strong> Confirm the <strong>YT</strong> icon appears on your device.
-    </div>
-    <button id="installBtn">Install YT App</button>
-  </div>
-
-  <script>
-    // 1. Generate PNG icon in memory
-    function createPngIcon(size) {
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#0f0f0f';
-      ctx.fillRect(0, 0, size, size);
-
-      const w = size * 0.76;
-      const h = size * 0.54;
-      const x = (size - w) / 2;
-      const y = (size - h) / 2;
-      const r = size * 0.14;
-
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, r);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(size * 0.43, size * 0.36);
-      ctx.lineTo(size * 0.43, size * 0.64);
-      ctx.lineTo(size * 0.64, size * 0.50);
-      ctx.closePath();
-      ctx.fill();
-
-      return canvas.toDataURL('image/png');
-    }
-
-    const icon192 = createPngIcon(192);
-    const icon512 = createPngIcon(512);
-    document.getElementById('favicon').href = icon192;
-    document.getElementById('apple-icon').href = icon192;
-
-    // 2. Embed Web App Manifest inline via Data URL
-    const manifest = {
-      name: 'YT',
-      short_name: 'YT',
-      start_url: location.href,
-      display: 'standalone',
-      background_color: '#0f0f0f',
-      theme_color: '#0f0f0f',
-      icons: [
-        { src: icon192, sizes: '192x192', type: 'image/png' },
-        { src: icon512, sizes: '512x512', type: 'image/png' }
-      ]
-    };
-    const manifestDataUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
-    document.getElementById('manifest-link').href = manifestDataUrl;
-
-    // 3. Register inline Service Worker via Blob
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        self.addEventListener('install', e => self.skipWaiting());
-        self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-        self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
-      `;
-      const swBlob = new Blob([swCode], { type: 'application/javascript' });
-      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
-    }
-
-    // 4. Native Install Prompt
-    let deferredPrompt;
-    const installBtn = document.getElementById('installBtn');
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      installBtn.style.display = 'block';
-    });
-
-    installBtn.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      installBtn.style.display = 'none';
-    });
-  </script>
+  <p>Opening <a href="https://www.youtube.com/?app=desktop">YT</a>...</p>
 </body>
 </html>
